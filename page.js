@@ -1,84 +1,200 @@
-import { supabase } from '@/lib/supabaseClient';
-import { categoryName, categoryColor } from '@/lib/categories';
-import { notFound } from 'next/navigation';
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { CATEGORIES } from '@/lib/categories';
 
-export const revalidate = 0;
+export default function Header() {
+  const router = useRouter();
+  const [q, setQ] = useState('');
+  const [dateTime, setDateTime] = useState('');
 
-async function getArticle(slug) {
-  const { data } = await supabase.from('articles').select('*').eq('slug', slug).single();
-  return data;
-}
+  // TARİX VƏ SAAT
+  useEffect(() => {
+    function updateDateTime() {
+      const now = new Date();
 
-export default async function ArticlePage({ params }) {
-  const article = await getArticle(params.slug);
-  if (!article) notFound();
+      const date = new Intl.DateTimeFormat('az-AZ', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(now);
 
-  // Baxış sayını artır (səhv olsa belə səhifə yüklənməyə davam etsin)
-  try {
-  await supabase.rpc('increment_views', { article_id: article.id });
-} catch (error) {
-  console.error('View count error:', error);
-}
+      const time = new Intl.DateTimeFormat('az-AZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(now);
 
-  const { data: related } = await supabase
-    .from('articles')
-    .select('id, title, slug, image_url, category')
-    .eq('category', article.category)
-    .neq('id', article.id)
-    .order('created_at', { ascending: false })
-    .limit(3);
+      setDateTime(`${date} · ${time}`);
+    }
+
+    updateDateTime();
+
+    const interval = setInterval(
+      updateDateTime,
+      60000
+    );
+
+    return () => clearInterval(interval);
+  }, []);
+
+  function handleSearch(e) {
+    e.preventDefault();
+
+    if (q.trim()) {
+      router.push(
+        `/axtar?q=${encodeURIComponent(q.trim())}`
+      );
+    }
+  }
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <div
-        className="font-mono text-[11px] font-semibold uppercase tracking-wider mb-3"
-        style={{ color: categoryColor(article.category) }}
-      >
-        <Link href={`/${article.category}`}>{categoryName(article.category)}</Link>
-      </div>
+    <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
 
-      <h1 className="font-serif text-3xl md:text-4xl font-semibold leading-tight mb-4">
-        {article.title}
-      </h1>
+      {/* ================= YUXARI HİSSƏ ================= */}
 
-      <div className="flex items-center gap-4 text-xs text-gray-400 mb-6 pb-6 border-b border-line">
-        {article.source && <span>Mənbə: {article.source}</span>}
-        <span>{new Date(article.created_at).toLocaleDateString('az-AZ')}</span>
-        <span>{article.views || 0} baxış</span>
-      </div>
+      <div className="max-w-6xl mx-auto px-6 py-4">
 
-      {article.image_url && (
-        <div className="aspect-[16/9] bg-ink2 mb-6 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" />
-        </div>
-      )}
+        <div className="flex items-center justify-between gap-4">
 
-      <article className="prose max-w-none text-[16px] text-gray-800 whitespace-pre-line">
-        {article.content}
-      </article>
+          {/* LOGO */}
 
-      {related && related.length > 0 && (
-        <div className="mt-12 pt-8 border-t border-line">
-          <h3 className="font-serif text-xl font-semibold mb-5">Bunları da oxu</h3>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {related.map((r) => (
-              <Link key={r.id} href={`/article/${r.slug}`} className="block group">
-                <div className="aspect-[16/10] bg-ink2 mb-2 overflow-hidden">
-                  {r.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.image_url} alt={r.title} className="w-full h-full object-cover" />
-                  )}
-                </div>
-                <h4 className="font-serif text-sm font-semibold leading-snug group-hover:text-blue line-clamp-2">
-                  {r.title}
-                </h4>
-              </Link>
-            ))}
+          <Link
+            href="/"
+            className="flex items-center gap-3"
+          >
+
+            <svg
+              width="34"
+              height="34"
+              viewBox="0 0 40 40"
+              fill="none"
+            >
+              <circle
+                cx="20"
+                cy="20"
+                r="18"
+                stroke="#10151C"
+                strokeWidth="2"
+              />
+
+              <path
+                d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
+                stroke="#1D4E89"
+                strokeWidth="2"
+                fill="none"
+              />
+            </svg>
+
+            <div>
+              <div className="font-serif text-2xl font-bold tracking-tight">
+                PANORAMA
+              </div>
+
+              <div className="text-[10px] uppercase tracking-widest text-gray-500">
+                Xəbər Portalı
+              </div>
+            </div>
+
+          </Link>
+
+          {/* SAĞ TƏRƏF */}
+
+          <div className="flex flex-col items-end gap-2">
+
+            {/* TARİX + SAAT */}
+
+            {dateTime && (
+              <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
+                {dateTime}
+              </div>
+            )}
+
+            {/* AXTARIŞ */}
+
+            <form
+              onSubmit={handleSearch}
+              className="hidden md:flex items-center border border-line rounded-sm overflow-hidden"
+            >
+
+              <input
+                value={q}
+                onChange={(e) =>
+                  setQ(e.target.value)
+                }
+                placeholder="Axtar..."
+                className="px-3 py-1.5 text-sm outline-none w-52"
+              />
+
+              <button
+                type="submit"
+                className="bg-ink text-white px-3 py-1.5 text-sm"
+              >
+                Axtar
+              </button>
+
+            </form>
+
           </div>
+
         </div>
-      )}
-    </div>
+
+      </div>
+
+      {/* ================= NAVİQASİYA ================= */}
+
+      <nav className="bg-ink overflow-x-auto">
+
+        <div className="max-w-6xl mx-auto px-6 flex items-center">
+
+          <Link
+            href="/"
+            className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap"
+          >
+            Əsas səhifə
+          </Link>
+
+          {CATEGORIES.map((c) => (
+            <Link
+              key={c.slug}
+              href={`/${c.slug}`}
+              className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap"
+            >
+              {c.name}
+            </Link>
+          ))}
+
+        </div>
+
+      </nav>
+
+      {/* ================= MOBİL AXTARIŞ ================= */}
+
+      <form
+        onSubmit={handleSearch}
+        className="md:hidden flex border-b border-line"
+      >
+
+        <input
+          value={q}
+          onChange={(e) =>
+            setQ(e.target.value)
+          }
+          placeholder="Xəbər axtar..."
+          className="flex-1 px-4 py-2 text-sm outline-none"
+        />
+
+        <button
+          type="submit"
+          className="bg-ink text-white px-4 text-sm"
+        >
+          Axtar
+        </button>
+
+      </form>
+
+    </header>
   );
 }

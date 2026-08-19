@@ -2,50 +2,160 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CATEGORIES } from '@/lib/categories';
 
 export default function Header() {
   const router = useRouter();
   const [q, setQ] = useState('');
+  const [dateTime, setDateTime] = useState('');
+
+  // TARİX VƏ SAAT
+  useEffect(() => {
+    function updateDateTime() {
+      const now = new Date();
+
+      const date = new Intl.DateTimeFormat('az-AZ', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(now);
+
+      const time = new Intl.DateTimeFormat('az-AZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(now);
+
+      setDateTime(`${date} · ${time}`);
+    }
+
+    updateDateTime();
+
+    const interval = setInterval(
+      updateDateTime,
+      60000
+    );
+
+    return () => clearInterval(interval);
+  }, []);
 
   function handleSearch(e) {
     e.preventDefault();
+
     if (q.trim()) {
-      router.push(`/axtar?q=${encodeURIComponent(q.trim())}`);
+      router.push(
+        `/axtar?q=${encodeURIComponent(q.trim())}`
+      );
     }
   }
 
   return (
     <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3">
-          <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="18" stroke="#10151C" strokeWidth="2" />
-            <path d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18" stroke="#1D4E89" strokeWidth="2" fill="none" />
-          </svg>
-          <div>
-            <div className="font-serif text-2xl font-bold tracking-tight">PANORAMA</div>
-            <div className="text-[10px] uppercase tracking-widest text-gray-500">Xəbər Portalı</div>
-          </div>
-        </Link>
 
-        <form onSubmit={handleSearch} className="hidden md:flex items-center border border-line rounded-sm overflow-hidden">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Axtar..."
-            className="px-3 py-1.5 text-sm outline-none w-52"
-          />
-          <button type="submit" className="bg-ink text-white px-3 py-1.5 text-sm">Axtar</button>
-        </form>
+      {/* ================= YUXARI HİSSƏ ================= */}
+
+      <div className="max-w-6xl mx-auto px-6 py-4">
+
+        <div className="flex items-center justify-between gap-4">
+
+          {/* LOGO */}
+
+          <Link
+            href="/"
+            className="flex items-center gap-3"
+          >
+
+            <svg
+              width="34"
+              height="34"
+              viewBox="0 0 40 40"
+              fill="none"
+            >
+              <circle
+                cx="20"
+                cy="20"
+                r="18"
+                stroke="#10151C"
+                strokeWidth="2"
+              />
+
+              <path
+                d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
+                stroke="#1D4E89"
+                strokeWidth="2"
+                fill="none"
+              />
+            </svg>
+
+            <div>
+              <div className="font-serif text-2xl font-bold tracking-tight">
+                PANORAMA
+              </div>
+
+              <div className="text-[10px] uppercase tracking-widest text-gray-500">
+                Xəbər Portalı
+              </div>
+            </div>
+
+          </Link>
+
+          {/* SAĞ TƏRƏF */}
+
+          <div className="flex flex-col items-end gap-2">
+
+            {/* TARİX + SAAT */}
+
+            {dateTime && (
+              <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
+                {dateTime}
+              </div>
+            )}
+
+            {/* AXTARIŞ */}
+
+            <form
+              onSubmit={handleSearch}
+              className="hidden md:flex items-center border border-line rounded-sm overflow-hidden"
+            >
+
+              <input
+                value={q}
+                onChange={(e) =>
+                  setQ(e.target.value)
+                }
+                placeholder="Axtar..."
+                className="px-3 py-1.5 text-sm outline-none w-52"
+              />
+
+              <button
+                type="submit"
+                className="bg-ink text-white px-3 py-1.5 text-sm"
+              >
+                Axtar
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+
       </div>
 
+      {/* ================= NAVİQASİYA ================= */}
+
       <nav className="bg-ink overflow-x-auto">
+
         <div className="max-w-6xl mx-auto px-6 flex items-center">
-          <Link href="/" className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap">
+
+          <Link
+            href="/"
+            className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap"
+          >
             Əsas səhifə
           </Link>
+
           {CATEGORIES.map((c) => (
             <Link
               key={c.slug}
@@ -55,18 +165,36 @@ export default function Header() {
               {c.name}
             </Link>
           ))}
+
         </div>
+
       </nav>
 
-      <form onSubmit={handleSearch} className="md:hidden flex border-b border-line">
+      {/* ================= MOBİL AXTARIŞ ================= */}
+
+      <form
+        onSubmit={handleSearch}
+        className="md:hidden flex border-b border-line"
+      >
+
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) =>
+            setQ(e.target.value)
+          }
           placeholder="Xəbər axtar..."
           className="flex-1 px-4 py-2 text-sm outline-none"
         />
-        <button type="submit" className="bg-ink text-white px-4 text-sm">Axtar</button>
+
+        <button
+          type="submit"
+          className="bg-ink text-white px-4 text-sm"
+        >
+          Axtar
+        </button>
+
       </form>
+
     </header>
   );
 }

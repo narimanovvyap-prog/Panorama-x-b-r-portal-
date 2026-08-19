@@ -27,3 +27,30 @@ article.prose p {
   margin-bottom: 1.1em;
   line-height: 1.75;
 }
+
+/* XƏBƏR LENTİ */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.news-ticker {
+  width: max-content;
+  animation: ticker 30s linear infinite;
+}
+
+.news-ticker:hover {
+  animation-play-state: paused;
+}
+
+/* MOBİL */
+@media (max-width: 640px) {
+  .news-ticker {
+    animation-duration: 20s;
+  }
+}
