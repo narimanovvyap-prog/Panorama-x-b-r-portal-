@@ -10,28 +10,34 @@ export default function Header() {
 
   const [q, setQ] = useState('');
   const [dateTime, setDateTime] = useState('');
+
   const [language, setLanguage] = useState('az');
 
   useEffect(() => {
-    const savedLanguage =
+    const saved =
       localStorage.getItem('site-language') || 'az';
 
-    setLanguage(savedLanguage);
+    setLanguage(saved);
   }, []);
+
+  /* =========================
+     TARİX + SAAT
+  ========================= */
 
   useEffect(() => {
     function updateDateTime() {
       const now = new Date();
 
       const date = new Intl.DateTimeFormat('az-AZ', {
-        day: 'numeric',
-        month: 'long',
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
       }).format(now);
 
       const time = new Intl.DateTimeFormat('az-AZ', {
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false,
       }).format(now);
 
@@ -42,11 +48,15 @@ export default function Header() {
 
     const interval = setInterval(
       updateDateTime,
-      60000
+      1000
     );
 
     return () => clearInterval(interval);
   }, []);
+
+  /* =========================
+     DİL
+  ========================= */
 
   function changeLanguage(lang) {
     setLanguage(lang);
@@ -58,6 +68,10 @@ export default function Header() {
 
     window.location.reload();
   }
+
+  /* =========================
+     AXTARIŞ
+  ========================= */
 
   function handleSearch(e) {
     e.preventDefault();
@@ -74,24 +88,31 @@ export default function Header() {
   return (
     <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
 
-      {/* ================= YUXARI ================= */}
+      {/* =========================
+          YUXARI HİSSƏ
+      ========================= */}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
 
         <div className="flex items-center justify-between gap-4">
 
-          {/* ================= LOGO ================= */}
+          {/* =========================
+              LOGO
+          ========================= */}
 
           <Link
             href="/"
             className="flex items-center gap-3 flex-shrink-0"
           >
 
+            {/* DƏYİŞMƏYƏN DAİRƏVİ LOGO */}
+
             <svg
-              width="34"
-              height="34"
+              width="40"
+              height="40"
               viewBox="0 0 40 40"
               fill="none"
+              aria-label="Panorama logo"
             >
               <circle
                 cx="20"
@@ -123,7 +144,9 @@ export default function Header() {
 
           </Link>
 
-          {/* ================= SAĞ TƏRƏF ================= */}
+          {/* =========================
+              SAĞ TƏRƏF
+          ========================= */}
 
           <div className="flex flex-col items-end gap-2">
 
@@ -131,11 +154,13 @@ export default function Header() {
 
             {dateTime && (
               <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
-                {dateTime}
+                📅 {dateTime}
               </div>
             )}
 
-            {/* ================= DİLLƏR ================= */}
+            {/* =========================
+                DİL SEÇİMİ
+            ========================= */}
 
             <div className="flex items-center gap-1">
 
@@ -144,7 +169,7 @@ export default function Header() {
                 onClick={() =>
                   changeLanguage('az')
                 }
-                className={`text-xs font-bold px-2.5 py-1 rounded-sm border ${
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-sm border ${
                   language === 'az'
                     ? 'bg-ink text-white border-ink'
                     : 'bg-white text-gray-500 border-line hover:text-ink'
@@ -158,7 +183,7 @@ export default function Header() {
                 onClick={() =>
                   changeLanguage('tr')
                 }
-                className={`text-xs font-bold px-2.5 py-1 rounded-sm border ${
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-sm border ${
                   language === 'tr'
                     ? 'bg-ink text-white border-ink'
                     : 'bg-white text-gray-500 border-line hover:text-ink'
@@ -172,7 +197,7 @@ export default function Header() {
                 onClick={() =>
                   changeLanguage('ru')
                 }
-                className={`text-xs font-bold px-2.5 py-1 rounded-sm border ${
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-sm border ${
                   language === 'ru'
                     ? 'bg-ink text-white border-ink'
                     : 'bg-white text-gray-500 border-line hover:text-ink'
@@ -183,7 +208,9 @@ export default function Header() {
 
             </div>
 
-            {/* ================= AXTARIŞ ================= */}
+            {/* =========================
+                AXTARIŞ
+            ========================= */}
 
             <form
               onSubmit={handleSearch}
@@ -214,7 +241,9 @@ export default function Header() {
 
       </div>
 
-      {/* ================= NAVİQASİYA ================= */}
+      {/* =========================
+          NAVİQASİYA
+      ========================= */}
 
       <nav className="bg-ink overflow-x-auto">
 
@@ -241,7 +270,9 @@ export default function Header() {
 
       </nav>
 
-      {/* ================= MOBİL AXTARIŞ ================= */}
+      {/* =========================
+          MOBİL AXTARIŞ
+      ========================= */}
 
       <form
         onSubmit={handleSearch}
