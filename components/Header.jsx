@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CATEGORIES } from '@/lib/categories';
+import { translations } from '@/lib/translations';
 
 export default function Header() {
   const router = useRouter();
@@ -11,6 +12,27 @@ export default function Header() {
   const [q, setQ] = useState('');
   const [time, setTime] = useState('');
   const [weather, setWeather] = useState(null);
+  const [language, setLanguage] = useState('az');
+
+  const t = translations[language];
+
+  // DİLİ YADDA SAXLA
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('panorama-language');
+
+    if (
+      savedLanguage === 'az' ||
+      savedLanguage === 'ru' ||
+      savedLanguage === 'en'
+    ) {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  function changeLanguage(lang) {
+    setLanguage(lang);
+    localStorage.setItem('panorama-language', lang);
+  }
 
   // SAAT
   useEffect(() => {
@@ -93,7 +115,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-bg border-b-2 border-ink">
 
-      {/* YUXARI ZOLAQ */}
+      {/* =========================
+          YUXARI ZOLAQ
+      ========================== */}
 
       <div className="bg-ink text-white">
 
@@ -120,12 +144,14 @@ export default function Header() {
                   : '🌤️'}
 
                 <span className="text-gray-300">
-                  Bakı
+                  {t.weather}
                 </span>
 
                 <span className="font-bold text-white">
                   {weather
-                    ? `${Math.round(weather.temperature_2m)}°C`
+                    ? `${Math.round(
+                        weather.temperature_2m
+                      )}°C`
                     : '...'}
                 </span>
 
@@ -139,21 +165,36 @@ export default function Header() {
 
               <button
                 type="button"
-                className="px-2 py-1 text-[10px] font-bold text-white bg-white/10 hover:bg-white/20 transition"
+                onClick={() => changeLanguage('az')}
+                className={`px-2 py-1 text-[10px] font-bold transition ${
+                  language === 'az'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
                 AZ
               </button>
 
               <button
                 type="button"
-                className="px-2 py-1 text-[10px] font-bold text-gray-400 hover:text-white transition"
+                onClick={() => changeLanguage('ru')}
+                className={`px-2 py-1 text-[10px] font-bold transition ${
+                  language === 'ru'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
                 RU
               </button>
 
               <button
                 type="button"
-                className="px-2 py-1 text-[10px] font-bold text-gray-400 hover:text-white transition"
+                onClick={() => changeLanguage('en')}
+                className={`px-2 py-1 text-[10px] font-bold transition ${
+                  language === 'en'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
                 EN
               </button>
@@ -166,18 +207,20 @@ export default function Header() {
 
       </div>
 
-      {/* LOGO HİSSƏSİ */}
+      {/* =========================
+          LOGO
+      ========================== */}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5">
 
         <div className="flex items-center justify-between gap-5">
 
-          {/* LOGO */}
-
           <Link
             href="/"
             className="flex items-center gap-3 group"
           >
+
+            {/* DAİRƏVİ LOGO */}
 
             <svg
               width="48"
@@ -228,13 +271,14 @@ export default function Header() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Xəbər axtar..."
+              placeholder={t.search}
               className="w-52 px-3 py-2 text-sm outline-none"
             />
 
             <button
               type="submit"
               className="bg-ink text-white px-4 hover:bg-blue transition"
+              aria-label={t.search}
             >
               🔎
             </button>
@@ -245,7 +289,9 @@ export default function Header() {
 
       </div>
 
-      {/* MENYU */}
+      {/* =========================
+          NAVİQASİYA
+      ========================== */}
 
       <nav className="bg-ink overflow-x-auto">
 
@@ -255,7 +301,7 @@ export default function Header() {
             href="/"
             className="bg-blue text-white text-sm font-bold px-4 py-3 whitespace-nowrap"
           >
-            Əsas səhifə
+            {t.home}
           </Link>
 
           {CATEGORIES.map((category) => (
@@ -272,7 +318,9 @@ export default function Header() {
 
       </nav>
 
-      {/* MOBİL AXTARIŞ */}
+      {/* =========================
+          MOBİL AXTARIŞ
+      ========================== */}
 
       <form
         onSubmit={handleSearch}
@@ -282,7 +330,7 @@ export default function Header() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Xəbər axtar..."
+          placeholder={t.search}
           className="flex-1 px-4 py-2.5 text-sm outline-none"
         />
 
@@ -290,7 +338,11 @@ export default function Header() {
           type="submit"
           className="bg-ink text-white px-5 text-sm font-semibold"
         >
-          Axtar
+          {language === 'az'
+            ? 'Axtar'
+            : language === 'ru'
+            ? 'Поиск'
+            : 'Search'}
         </button>
 
       </form>
