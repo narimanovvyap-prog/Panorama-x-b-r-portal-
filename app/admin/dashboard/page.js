@@ -55,9 +55,9 @@ export default function AdminDashboard() {
 
   const [message, setMessage] = useState('');
 
-  /* =========================
+  /* =====================================================
      XƏBƏRLƏRİ YÜKLƏ
-  ========================= */
+  ===================================================== */
 
   const loadArticles = useCallback(async () => {
     const { data, error } = await supabase
@@ -76,9 +76,9 @@ export default function AdminDashboard() {
     setArticles(data || []);
   }, []);
 
-  /* =========================
+  /* =====================================================
      REKLAMLARI YÜKLƏ
-  ========================= */
+  ===================================================== */
 
   const loadAdvertisements = useCallback(async () => {
     const { data, error } = await supabase
@@ -97,9 +97,9 @@ export default function AdminDashboard() {
     setAdvertisements(data || []);
   }, []);
 
-  /* =========================
+  /* =====================================================
      LOGIN YOXLAMASI
-  ========================= */
+  ===================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -138,9 +138,9 @@ export default function AdminDashboard() {
     };
   }, [router]);
 
-  /* =========================
+  /* =====================================================
      DATA YÜKLƏ
-  ========================= */
+  ===================================================== */
 
   useEffect(() => {
     if (session) {
@@ -153,18 +153,18 @@ export default function AdminDashboard() {
     loadAdvertisements,
   ]);
 
-  /* =========================
+  /* =====================================================
      LOGOUT
-  ========================= */
+  ===================================================== */
 
   async function handleLogout() {
     await supabase.auth.signOut();
     router.replace('/admin');
   }
 
-  /* =========================
-     XƏBƏR ŞƏKLİ YÜKLƏ
-  ========================= */
+  /* =====================================================
+     XƏBƏR ŞƏKİLLƏRİNİ YÜKLƏ
+  ===================================================== */
 
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
@@ -190,6 +190,8 @@ export default function AdminDashboard() {
         .upload(fileName, file);
 
       if (error) {
+        console.error(error);
+
         setMessage(
           'Şəkil yüklənərkən xəta: ' +
             error.message
@@ -203,22 +205,23 @@ export default function AdminDashboard() {
         .from('xeber-sekiller')
         .getPublicUrl(fileName);
 
-      uploadedUrls.push(data.publicUrl);
+      if (data?.publicUrl) {
+        uploadedUrls.push(data.publicUrl);
+      }
     }
 
-    setForm((current) => ({
-      ...current,
-
-      image_urls: [
+    setForm((current) => {
+      const newImages = [
         ...current.image_urls,
         ...uploadedUrls,
-      ],
+      ];
 
-      image_url:
-        current.image_url ||
-        uploadedUrls[0] ||
-        '',
-    }));
+      return {
+        ...current,
+        image_urls: newImages,
+        image_url: newImages[0] || '',
+      };
+    });
 
     setUploading(false);
 
@@ -229,9 +232,9 @@ export default function AdminDashboard() {
     e.target.value = '';
   }
 
-  /* =========================
-     XƏBƏR ŞƏKLİ SİL
-  ========================= */
+  /* =====================================================
+     ŞƏKİL SİL
+  ===================================================== */
 
   function removeImage(index) {
     setForm((current) => {
@@ -248,9 +251,42 @@ export default function AdminDashboard() {
     });
   }
 
-  /* =========================
+  /* =====================================================
+     ŞƏKLİN YERİNİ DƏYİŞ
+  ===================================================== */
+
+  function moveImage(index, direction) {
+    setForm((current) => {
+      const images = [...current.image_urls];
+
+      const newIndex =
+        direction === 'left'
+          ? index - 1
+          : index + 1;
+
+      if (
+        newIndex < 0 ||
+        newIndex >= images.length
+      ) {
+        return current;
+      }
+
+      const temp = images[index];
+
+      images[index] = images[newIndex];
+      images[newIndex] = temp;
+
+      return {
+        ...current,
+        image_urls: images,
+        image_url: images[0] || '',
+      };
+    });
+  }
+
+  /* =====================================================
      🎥 VİDEO YÜKLƏ
-  ========================= */
+  ===================================================== */
 
   async function handleVideoUpload(e) {
     const file = e.target.files?.[0];
@@ -258,7 +294,10 @@ export default function AdminDashboard() {
     if (!file) return;
 
     if (!file.type.startsWith('video/')) {
-      setMessage('❌ Zəhmət olmasa video faylı seç.');
+      setMessage(
+        '❌ Zəhmət olmasa video faylı seç.'
+      );
+
       e.target.value = '';
       return;
     }
@@ -273,9 +312,10 @@ export default function AdminDashboard() {
       .replace(/\s+/g, '-')
       .replace(/[^a-zA-Z0-9._-]/g, '');
 
-    const fileName = `video-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 8)}-${safeName || `video.${extension}`}`;
+    const fileName =
+      `video-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}-${safeName || `video.${extension}`}`;
 
     const { error } = await supabase.storage
       .from('xeber-videolar')
@@ -319,9 +359,9 @@ export default function AdminDashboard() {
     e.target.value = '';
   }
 
-  /* =========================
+  /* =====================================================
      🎥 VİDEONU SİL
-  ========================= */
+  ===================================================== */
 
   function removeVideo() {
     setForm((current) => ({
@@ -332,9 +372,9 @@ export default function AdminDashboard() {
     setMessage('');
   }
 
-  /* =========================
+  /* =====================================================
      XƏBƏR SAXLA
-  ========================= */
+  ===================================================== */
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -402,14 +442,17 @@ export default function AdminDashboard() {
         : '✅ Xəbər əlavə edildi.'
     );
 
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      image_urls: [],
+    });
 
     await loadArticles();
   }
 
-  /* =========================
+  /* =====================================================
      XƏBƏR REDAKTƏ
-  ========================= */
+  ===================================================== */
 
   function handleEdit(article) {
     let images = [];
@@ -463,9 +506,9 @@ export default function AdminDashboard() {
     });
   }
 
-  /* =========================
+  /* =====================================================
      XƏBƏR SİL
-  ========================= */
+  ===================================================== */
 
   async function handleDelete(id) {
     if (
@@ -488,12 +531,14 @@ export default function AdminDashboard() {
       return;
     }
 
+    setMessage('✅ Xəbər silindi.');
+
     await loadArticles();
   }
 
-  /* =========================
+  /* =====================================================
      BAŞ XƏBƏR
-  ========================= */
+  ===================================================== */
 
   async function toggleFeatured(article) {
     const { error } = await supabase
@@ -514,9 +559,9 @@ export default function AdminDashboard() {
     await loadArticles();
   }
 
-  /* =========================
+  /* =====================================================
      TƏCİLİ XƏBƏR
-  ========================= */
+  ===================================================== */
 
   async function toggleBreaking(article) {
     const { error } = await supabase
@@ -537,9 +582,9 @@ export default function AdminDashboard() {
     await loadArticles();
   }
 
-  /* =========================
+  /* =====================================================
      REKLAM ŞƏKLİ YÜKLƏ
-  ========================= */
+  ===================================================== */
 
   async function handleAdImageUpload(e) {
     const file = e.target.files?.[0];
@@ -553,15 +598,18 @@ export default function AdminDashboard() {
       .replace(/\s+/g, '-')
       .replace(/[^a-zA-Z0-9._-]/g, '');
 
-    const fileName = `reklam-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 8)}-${safeName}`;
+    const fileName =
+      `reklam-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}-${safeName}`;
 
     const { error } = await supabase.storage
       .from('xeber-sekiller')
       .upload(fileName, file);
 
     if (error) {
+      console.error(error);
+
       setMessage(
         'Reklam şəkli yüklənərkən xəta: ' +
           error.message
@@ -589,9 +637,9 @@ export default function AdminDashboard() {
     e.target.value = '';
   }
 
-  /* =========================
+  /* =====================================================
      REKLAM SAXLA
-  ========================= */
+  ===================================================== */
 
   async function handleAdSubmit(e) {
     e.preventDefault();
@@ -682,9 +730,9 @@ export default function AdminDashboard() {
     await loadAdvertisements();
   }
 
-  /* =========================
+  /* =====================================================
      REKLAM REDAKTƏ
-  ========================= */
+  ===================================================== */
 
   function handleAdEdit(ad) {
     function formatDateForInput(date) {
@@ -753,9 +801,9 @@ export default function AdminDashboard() {
     });
   }
 
-  /* =========================
+  /* =====================================================
      REKLAM SİL
-  ========================= */
+  ===================================================== */
 
   async function handleAdDelete(id) {
     if (
@@ -785,9 +833,9 @@ export default function AdminDashboard() {
     await loadAdvertisements();
   }
 
-  /* =========================
+  /* =====================================================
      REKLAM AKTİV / DEAKTİV
-  ========================= */
+  ===================================================== */
 
   async function toggleAdvertisement(ad) {
     const { error } = await supabase
@@ -808,13 +856,14 @@ export default function AdminDashboard() {
     await loadAdvertisements();
   }
 
-  /* =========================
+  /* =====================================================
      LOADING
-  ========================= */
+  ===================================================== */
 
   if (checking) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-16 text-center">
+
         <div className="font-serif text-xl font-semibold mb-2">
           Admin panel
         </div>
@@ -822,6 +871,7 @@ export default function AdminDashboard() {
         <p className="text-sm text-gray-500">
           Yüklənir...
         </p>
+
       </div>
     );
   }
@@ -833,13 +883,14 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-      {/* =========================
+      {/* =====================================================
           BAŞLIQ
-      ========================= */}
+      ===================================================== */}
 
       <div className="flex items-center justify-between mb-8">
 
         <div>
+
           <p className="text-xs uppercase tracking-widest text-blue font-semibold mb-1">
             PANORAMA XƏBƏR
           </p>
@@ -847,6 +898,7 @@ export default function AdminDashboard() {
           <h1 className="font-serif text-2xl font-bold">
             Admin panel
           </h1>
+
         </div>
 
         <button
@@ -858,9 +910,9 @@ export default function AdminDashboard() {
 
       </div>
 
-      {/* =========================
-          BÖLMƏ DÜYMƏLƏRİ
-      ========================= */}
+      {/* =====================================================
+          BÖLMƏLƏR
+      ===================================================== */}
 
       <div className="flex flex-wrap gap-2 mb-8">
 
@@ -896,9 +948,9 @@ export default function AdminDashboard() {
 
       </div>
 
-      {/* =========================
+      {/* =====================================================
           MESAJ
-      ========================= */}
+      ===================================================== */}
 
       {message && (
         <div className="mb-6 border border-line bg-panel px-4 py-3 text-sm">
@@ -912,6 +964,7 @@ export default function AdminDashboard() {
 
       {activeSection === 'articles' && (
         <>
+
           <form
             onSubmit={handleSubmit}
             className="bg-panel border border-line p-5 sm:p-6 mb-10 flex flex-col gap-4"
@@ -926,6 +979,7 @@ export default function AdminDashboard() {
             {/* BAŞLIQ */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 📝 Başlıq
               </label>
@@ -941,11 +995,13 @@ export default function AdminDashboard() {
                 }
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* QISA TƏSVİR */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 Qısa təsvir
               </label>
@@ -960,11 +1016,13 @@ export default function AdminDashboard() {
                 }
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* XƏBƏR MƏTNİ */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 📄 Xəbər mətni
               </label>
@@ -981,6 +1039,7 @@ export default function AdminDashboard() {
                 }
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* KATEQORİYA + MƏNBƏ */}
@@ -988,6 +1047,7 @@ export default function AdminDashboard() {
             <div className="grid sm:grid-cols-2 gap-4">
 
               <div>
+
                 <label className="text-xs font-semibold text-gray-500 block mb-1">
                   📂 Kateqoriya
                 </label>
@@ -1002,6 +1062,7 @@ export default function AdminDashboard() {
                   }
                   className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
                 >
+
                   {CATEGORIES.map((c) => (
                     <option
                       key={c.slug}
@@ -1010,10 +1071,13 @@ export default function AdminDashboard() {
                       {c.name}
                     </option>
                   ))}
+
                 </select>
+
               </div>
 
               <div>
+
                 <label className="text-xs font-semibold text-gray-500 block mb-1">
                   📰 Mənbə
                 </label>
@@ -1029,15 +1093,17 @@ export default function AdminDashboard() {
                   placeholder="məs. APA.AZ"
                   className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
                 />
+
               </div>
 
             </div>
 
-            {/* =========================
+            {/* =====================================================
                 ŞƏKİLLƏR
-            ========================= */}
+            ===================================================== */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 🖼️ Xəbər şəkilləri
               </label>
@@ -1051,7 +1117,8 @@ export default function AdminDashboard() {
               />
 
               <p className="text-xs text-gray-400 mt-2">
-                Bir şəkil və ya bir neçə şəkil seçə bilərsən.
+                Bir və ya bir neçə şəkil seçə bilərsən.
+                Yüklədikdən sonra şəkillərin yerini dəyişə bilərsən.
               </p>
 
               {uploading && (
@@ -1060,47 +1127,114 @@ export default function AdminDashboard() {
                 </p>
               )}
 
+              {/* ŞƏKİL SİYAHISI */}
+
               {form.image_urls.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
 
                   {form.image_urls.map(
                     (url, index) => (
+
                       <div
                         key={`${url}-${index}`}
-                        className="relative"
+                        className="relative border border-line rounded-sm bg-white p-2"
                       >
 
-                        <img
-                          src={url}
-                          alt={`Şəkil ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-sm"
-                        />
+                        {/* ŞƏKİL */}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeImage(index)
-                          }
-                          className="absolute top-1 right-1 bg-crimson text-white rounded-full w-7 h-7 text-sm"
-                        >
-                          ×
-                        </button>
+                        <div className="relative">
 
-                        <div className="text-[10px] text-gray-400 mt-1">
+                          <img
+                            src={url}
+                            alt={`Şəkil ${index + 1}`}
+                            className="w-full h-40 object-cover rounded-sm"
+                          />
+
+                          {/* ƏSAS ŞƏKİL */}
+
+                          {index === 0 && (
+                            <div className="absolute left-2 top-2 bg-ink text-white text-[10px] font-bold px-2 py-1 rounded-sm">
+                              ⭐ ƏSAS ŞƏKİL
+                            </div>
+                          )}
+
+                          {/* SİL */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeImage(index)
+                            }
+                            className="absolute top-2 right-2 bg-crimson text-white rounded-full w-8 h-8 text-sm font-bold"
+                          >
+                            ×
+                          </button>
+
+                        </div>
+
+                        {/* ŞƏKİL NÖMRƏSİ */}
+
+                        <div className="text-center text-xs text-gray-500 mt-2 font-semibold">
                           Şəkil {index + 1}
                         </div>
 
+                        {/* YER DƏYİŞMƏ */}
+
+                        <div className="flex items-center gap-2 mt-2">
+
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() =>
+                              moveImage(
+                                index,
+                                'left'
+                              )
+                            }
+                            className="flex-1 border border-line px-2 py-2 text-xs font-semibold rounded-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                          >
+                            ← Sola
+                          </button>
+
+                          <div className="text-[10px] text-gray-400 whitespace-nowrap">
+                            {index + 1} /{' '}
+                            {form.image_urls.length}
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={
+                              index ===
+                              form.image_urls.length - 1
+                            }
+                            onClick={() =>
+                              moveImage(
+                                index,
+                                'right'
+                              )
+                            }
+                            className="flex-1 border border-line px-2 py-2 text-xs font-semibold rounded-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                          >
+                            Sağa →
+                          </button>
+
+                        </div>
+
                       </div>
+
                     )
                   )}
 
                 </div>
+
               )}
+
             </div>
 
-            {/* =========================
+            {/* =====================================================
                 🎥 VİDEO
-            ========================= */}
+            ===================================================== */}
 
             <div className="border border-line rounded-sm p-4">
 
@@ -1158,6 +1292,7 @@ export default function AdminDashboard() {
             {/* BAŞ XƏBƏR */}
 
             <label className="flex items-center gap-2 text-sm">
+
               <input
                 type="checkbox"
                 checked={form.is_featured}
@@ -1171,11 +1306,13 @@ export default function AdminDashboard() {
               />
 
               ⭐ Baş xəbər et
+
             </label>
 
             {/* TƏCİLİ */}
 
             <label className="flex items-center gap-2 text-sm">
+
               <input
                 type="checkbox"
                 checked={form.is_breaking}
@@ -1189,6 +1326,7 @@ export default function AdminDashboard() {
               />
 
               🚨 Təcili xəbər
+
             </label>
 
             {/* BUTTON */}
@@ -1215,7 +1353,10 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => {
-                    setForm(emptyForm);
+                    setForm({
+                      ...emptyForm,
+                      image_urls: [],
+                    });
                     setMessage('');
                   }}
                   className="text-sm text-gray-500"
@@ -1228,7 +1369,9 @@ export default function AdminDashboard() {
 
           </form>
 
-          {/* XƏBƏRLƏR SİYAHISI */}
+          {/* =====================================================
+              XƏBƏRLƏR SİYAHISI
+          ===================================================== */}
 
           <h2 className="font-serif text-lg font-semibold mb-4">
             Bütün xəbərlər ({articles.length})
@@ -1237,6 +1380,7 @@ export default function AdminDashboard() {
           <div className="flex flex-col gap-2">
 
             {articles.map((article) => (
+
               <div
                 key={article.id}
                 className="border border-line rounded-sm px-4 py-3"
@@ -1262,12 +1406,22 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="text-xs text-gray-400 mt-1">
+
                       {article.category} ·{' '}
+
                       {article.views || 0}{' '}
                       baxış
 
                       {article.video_url &&
                         ' · 🎥 Video var'}
+
+                      {Array.isArray(
+                        article.image_urls
+                      ) &&
+                        article.image_urls.length >
+                          1 &&
+                        ` · 🖼️ ${article.image_urls.length} şəkil`}
+
                     </div>
 
                   </div>
@@ -1275,6 +1429,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-wrap gap-3">
 
                     <button
+                      type="button"
                       onClick={() =>
                         toggleFeatured(article)
                       }
@@ -1286,6 +1441,7 @@ export default function AdminDashboard() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         toggleBreaking(article)
                       }
@@ -1297,6 +1453,7 @@ export default function AdminDashboard() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         handleEdit(article)
                       }
@@ -1306,6 +1463,7 @@ export default function AdminDashboard() {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() =>
                         handleDelete(article.id)
                       }
@@ -1319,6 +1477,7 @@ export default function AdminDashboard() {
                 </div>
 
               </div>
+
             ))}
 
             {articles.length === 0 && (
@@ -1328,6 +1487,7 @@ export default function AdminDashboard() {
             )}
 
           </div>
+
         </>
       )}
 
@@ -1337,6 +1497,7 @@ export default function AdminDashboard() {
 
       {activeSection === 'ads' && (
         <>
+
           <form
             onSubmit={handleAdSubmit}
             className="bg-panel border border-line p-5 sm:p-6 mb-10 flex flex-col gap-4"
@@ -1351,6 +1512,7 @@ export default function AdminDashboard() {
             {/* REKLAM BAŞLIĞI */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 📢 Reklam başlığı
               </label>
@@ -1367,11 +1529,13 @@ export default function AdminDashboard() {
                 placeholder="Məsələn: Yeni mağazamız açıldı"
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* REKLAM VERƏN */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 🏢 Reklam verən
               </label>
@@ -1388,11 +1552,13 @@ export default function AdminDashboard() {
                 placeholder="Şirkət və ya şəxs adı"
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* TƏSVİR */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 📝 Reklam mətni
               </label>
@@ -1410,11 +1576,13 @@ export default function AdminDashboard() {
                 placeholder="Reklam haqqında qısa məlumat"
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* REKLAM ŞƏKLİ */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 🖼️ Reklam banneri
               </label>
@@ -1456,11 +1624,13 @@ export default function AdminDashboard() {
 
                 </div>
               )}
+
             </div>
 
             {/* LINK */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 🔗 Reklam linki
               </label>
@@ -1478,11 +1648,13 @@ export default function AdminDashboard() {
                 placeholder="https://..."
                 className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
               />
+
             </div>
 
             {/* YERLƏŞDİRMƏ */}
 
             <div>
+
               <label className="text-xs font-semibold text-gray-500 block mb-1">
                 📍 Reklamın yeri
               </label>
@@ -1512,6 +1684,7 @@ export default function AdminDashboard() {
                 </option>
 
               </select>
+
             </div>
 
             {/* TARİXLƏR */}
@@ -1519,6 +1692,7 @@ export default function AdminDashboard() {
             <div className="grid sm:grid-cols-2 gap-4">
 
               <div>
+
                 <label className="text-xs font-semibold text-gray-500 block mb-1">
                   📅 Başlama tarixi
                 </label>
@@ -1535,9 +1709,11 @@ export default function AdminDashboard() {
                   }
                   className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
                 />
+
               </div>
 
               <div>
+
                 <label className="text-xs font-semibold text-gray-500 block mb-1">
                   📅 Bitmə tarixi
                 </label>
@@ -1554,6 +1730,7 @@ export default function AdminDashboard() {
                   }
                   className="w-full border border-line rounded-sm px-3 py-2 text-sm bg-white"
                 />
+
               </div>
 
             </div>
@@ -1614,7 +1791,9 @@ export default function AdminDashboard() {
 
           </form>
 
-          {/* REKLAMLAR */}
+          {/* =====================================================
+              REKLAMLAR SİYAHISI
+          ===================================================== */}
 
           <h2 className="font-serif text-lg font-semibold mb-4">
             Bütün reklamlar ({advertisements.length})
@@ -1624,6 +1803,7 @@ export default function AdminDashboard() {
 
             {advertisements.map(
               (ad) => (
+
                 <div
                   key={ad.id}
                   className="border border-line rounded-sm p-4"
@@ -1652,7 +1832,9 @@ export default function AdminDashboard() {
                       )}
 
                       <div className="text-xs text-gray-400 mt-1">
+
                         📍{' '}
+
                         {ad.position ===
                         'homepage'
                           ? 'Ana səhifə'
@@ -1660,9 +1842,11 @@ export default function AdminDashboard() {
                             'article'
                           ? 'Xəbər səhifələri'
                           : 'Ana səhifə + Xəbərlər'}
+
                       </div>
 
                       <div className="text-xs mt-1">
+
                         {ad.is_active ? (
                           <span className="text-green-600">
                             🟢 Aktiv
@@ -1672,6 +1856,7 @@ export default function AdminDashboard() {
                             ⚪ Deaktiv
                           </span>
                         )}
+
                       </div>
 
                     </div>
@@ -1679,6 +1864,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-wrap gap-3 items-start">
 
                       <button
+                        type="button"
                         onClick={() =>
                           toggleAdvertisement(ad)
                         }
@@ -1690,6 +1876,7 @@ export default function AdminDashboard() {
                       </button>
 
                       <button
+                        type="button"
                         onClick={() =>
                           handleAdEdit(ad)
                         }
@@ -1699,6 +1886,7 @@ export default function AdminDashboard() {
                       </button>
 
                       <button
+                        type="button"
                         onClick={() =>
                           handleAdDelete(ad.id)
                         }
@@ -1712,6 +1900,7 @@ export default function AdminDashboard() {
                   </div>
 
                 </div>
+
               )
             )}
 
@@ -1722,6 +1911,7 @@ export default function AdminDashboard() {
             )}
 
           </div>
+
         </>
       )}
 
