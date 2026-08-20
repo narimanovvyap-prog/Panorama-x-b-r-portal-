@@ -12,47 +12,74 @@ export default function Header() {
   const [weather, setWeather] = useState('Bakı');
   const t =
     translations?.[language] ||
-    translations?.az ||
-    {
+    translations?.az || {
       home: 'Əsas səhifə',
       search: 'Axtar...',
+      latest: 'Son xəbərlər',
+      mostRead: 'Ən çox oxunanlar',
+      source: 'Mənbə',
+      weather: 'Bakı',
     };
-  // DİL
+  // =====================================================
+  // DİL SİSTEMİ
+  // =====================================================
   useEffect(() => {
-    const saved = localStorage.getItem('language');
-    if (saved && translations?.[saved]) {
-      setLanguage(saved);
+    try {
+      const savedLanguage =
+        localStorage.getItem('language');
+      if (
+        savedLanguage &&
+        translations?.[savedLanguage]
+      ) {
+        setLanguage(savedLanguage);
+      }
+    } catch {
+      setLanguage('az');
     }
   }, []);
   function changeLanguage(lang) {
     if (!translations?.[lang]) return;
     setLanguage(lang);
-    localStorage.setItem('language', lang);
-    // Digər komponentlər də dili yeniləsin
-    window.dispatchEvent(
-      new CustomEvent('languageChange', {
-        detail: lang,
-      })
-    );
+    try {
+      localStorage.setItem(
+        'language',
+        lang
+      );
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('languageChange', {
+          detail: lang,
+        })
+      );
+    }
   }
+  // =====================================================
   // SAAT
+  // =====================================================
   useEffect(() => {
     function updateTime() {
       const now = new Date();
-      setTime(
+      const formattedTime =
         new Intl.DateTimeFormat('az-AZ', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
-        }).format(now)
-      );
+        }).format(now);
+      setTime(formattedTime);
     }
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(
+      updateTime,
+      1000
+    );
     return () => clearInterval(interval);
   }, []);
-  // BAKI HAVA
+  // =====================================================
+  // BAKI HAVA PROQNOZU
+  // =====================================================
   useEffect(() => {
+    let cancelled = false;
     async function getWeather() {
       try {
         const response = await fetch(
@@ -62,13 +89,20 @@ export default function Header() {
         const data = await response.json();
         const temperature =
           data?.current?.temperature_2m;
-        if (temperature !== undefined) {
+        if (
+          temperature !== undefined &&
+          !cancelled
+        ) {
           setWeather(
-            `Bakı ${Math.round(temperature)}°C`
+            `Bakı ${Math.round(
+              temperature
+            )}°C`
           );
         }
       } catch {
-        setWeather('Bakı');
+        if (!cancelled) {
+          setWeather('Bakı');
+        }
       }
     }
     getWeather();
@@ -76,132 +110,216 @@ export default function Header() {
       getWeather,
       10 * 60 * 1000
     );
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
+  // =====================================================
   // AXTARIŞ
+  // =====================================================
   function handleSearch(e) {
     e.preventDefault();
-    if (!q.trim()) return;
+    const value = q.trim();
+    if (!value) return;
     router.push(
-      `/axtar?q=${encodeURIComponent(q.trim())}`
+      `/axtar?q=${encodeURIComponent(value)}`
     );
   }
+  // =====================================================
+  // HEADER
+  // =====================================================
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
-      {/* YUXARI HİSSƏ */}
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+      {/* =================================================
+          ÜST HİSSƏ
+      ================================================= */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between gap-4 py-4">
-          {/* LOGO */}
+        <div className="min-h-[78px] flex items-center justify-between gap-5">
+          {/* =================================================
+              PANORAMA LOGO
+          ================================================= */}
           <Link
             href="/"
-            className="flex items-center gap-3 shrink-0"
+            className="flex items-center gap-3 shrink-0 group"
           >
-            <div className="w-11 h-11 rounded-full flex items-center justify-center">
+            {/* LOGO İKONU */}
+            <div className="flex items-center justify-center">
               <svg
-                width="34"
-                height="34"
+                width="40"
+                height="40"
                 viewBox="0 0 40 40"
                 fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <circle
                   cx="20"
                   cy="20"
-                  r="17"
+                  r="18"
                   stroke="#111827"
                   strokeWidth="2"
                 />
                 <path
                   d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
                   stroke="#1D4E89"
-                  strokeWidth="2.5"
+                  strokeWidth="2.4"
                   fill="none"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             </div>
-            <div>
-              <div className="font-serif text-2xl font-bold tracking-tight">
+            {/* LOGO YAZISI */}
+            <div className="leading-none">
+              <div className="font-serif text-[24px] sm:text-[27px] font-bold tracking-tight text-gray-950">
                 PANORAMA
               </div>
-              <div className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+              <div className="mt-1 text-[9px] sm:text-[10px] uppercase tracking-[0.28em] text-gray-500">
                 Xəbər Portalı
               </div>
             </div>
           </Link>
-          {/* SAĞ TƏRƏF */}
-          <div className="flex items-center gap-3">
+          {/* =================================================
+              SAĞ TƏRƏF
+          ================================================= */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* BAKI HAVA */}
-            <div className="hidden sm:flex items-center gap-2 rounded-full bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs text-gray-600">
-              <span>☀️</span>
-              <span>{weather}</span>
+            <div className="hidden md:flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2">
+              <span className="text-sm">
+                ☀️
+              </span>
+              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                {weather}
+              </span>
             </div>
             {/* SAAT */}
-            <div className="hidden sm:block text-sm font-semibold text-gray-700 tabular-nums">
-              {time}
+            <div className="hidden sm:flex items-center rounded-full border border-gray-200 bg-gray-50 px-3.5 py-2">
+              <span className="text-sm font-semibold text-gray-800 tabular-nums">
+                {time}
+              </span>
             </div>
-            {/* DİL */}
-            <div className="flex items-center rounded-full border border-gray-200 bg-gray-50 p-1">
-              {[
-                ['az', 'AZ'],
-                ['ru', 'RU'],
-                ['en', 'EN'],
-              ].map(([code, label]) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() =>
-                    changeLanguage(code)
-                  }
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition ${
-                    language === code
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            {/* =================================================
+                DİL SEÇİMİ
+            ================================================= */}
+            <div
+              className="flex items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm"
+              aria-label="Dil seçimi"
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  changeLanguage('az')
+                }
+                className={`min-w-[36px] px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all ${
+                  language === 'az'
+                    ? 'bg-gray-950 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-950'
+                }`}
+              >
+                AZ
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  changeLanguage('ru')
+                }
+                className={`min-w-[36px] px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all ${
+                  language === 'ru'
+                    ? 'bg-gray-950 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-950'
+                }`}
+              >
+                RU
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  changeLanguage('en')
+                }
+                className={`min-w-[36px] px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all ${
+                  language === 'en'
+                    ? 'bg-gray-950 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-950'
+                }`}
+              >
+                EN
+              </button>
             </div>
           </div>
         </div>
       </div>
-      {/* NAVİQASİYA */}
-      <nav className="bg-gray-900 overflow-x-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center">
-          <Link
-            href="/"
-            className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap transition"
-          >
-            {t.home}
-          </Link>
-          {CATEGORIES.map((category) => (
+      {/* =================================================
+          NAVİQASİYA
+      ================================================= */}
+      <nav className="bg-gray-950 overflow-x-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center min-h-[46px]">
+            {/* ƏSAS SƏHİFƏ */}
             <Link
-              key={category.slug}
-              href={`/${category.slug}`}
-              className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap transition"
+              href="/"
+              className="text-white text-sm font-semibold px-3.5 py-3 whitespace-nowrap hover:text-gray-200 transition"
             >
-              {category.name}
+              {t.home}
             </Link>
-          ))}
+            {/* KATEQORİYALAR */}
+            {CATEGORIES.map(
+              (category) => (
+                <Link
+                  key={category.slug}
+                  href={`/${category.slug}`}
+                  className="text-gray-300 hover:text-white text-sm font-medium px-3.5 py-3 whitespace-nowrap transition"
+                >
+                  {category.name}
+                </Link>
+              )
+            )}
+          </div>
         </div>
       </nav>
-      {/* AXTARIŞ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+      {/* =================================================
+          AXTARIŞ
+      ================================================= */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
         <form
           onSubmit={handleSearch}
-          className="flex items-center border border-gray-200 rounded-full overflow-hidden bg-gray-50 focus-within:bg-white focus-within:border-gray-400 transition"
+          className="w-full sm:max-w-[420px] sm:ml-auto flex items-center rounded-full border border-gray-200 bg-gray-50 overflow-hidden focus-within:bg-white focus-within:border-gray-400 focus-within:shadow-sm transition-all"
         >
+          {/* AXTARIŞ İKONU */}
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="ml-4 shrink-0 text-gray-400"
+          >
+            <path
+              d="M21 21L16.65 16.65"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+          </svg>
+          {/* INPUT */}
           <input
+            type="text"
             value={q}
             onChange={(e) =>
               setQ(e.target.value)
             }
             placeholder={t.search}
-            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none"
+            className="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none"
           />
+          {/* AXTAR DÜYMƏSİ */}
           <button
             type="submit"
-            className="bg-gray-900 text-white px-5 py-2 text-sm font-semibold hover:bg-gray-700 transition"
+            className="mr-1 rounded-full bg-gray-950 text-white px-4 py-2 text-xs sm:text-sm font-semibold hover:bg-gray-800 transition"
           >
             {language === 'az'
               ? 'Axtar'
