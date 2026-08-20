@@ -10,32 +10,42 @@ export default function Header() {
   const [time, setTime] = useState('');
   const [language, setLanguage] = useState('az');
   const [weather, setWeather] = useState('Bakı');
-  const t = translations?.[language] || translations?.az || {
-    home: 'Əsas səhifə',
-    search: 'Axtar...',
-  };
+  const t =
+    translations?.[language] ||
+    translations?.az ||
+    {
+      home: 'Əsas səhifə',
+      search: 'Axtar...',
+    };
   // DİL
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language');
-    if (savedLanguage && translations?.[savedLanguage]) {
-      setLanguage(savedLanguage);
+    const saved = localStorage.getItem('language');
+    if (saved && translations?.[saved]) {
+      setLanguage(saved);
     }
   }, []);
   function changeLanguage(lang) {
     if (!translations?.[lang]) return;
     setLanguage(lang);
     localStorage.setItem('language', lang);
+    // Digər komponentlər də dili yeniləsin
+    window.dispatchEvent(
+      new CustomEvent('languageChange', {
+        detail: lang,
+      })
+    );
   }
   // SAAT
   useEffect(() => {
     function updateTime() {
       const now = new Date();
-      const formattedTime = new Intl.DateTimeFormat('az-AZ', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(now);
-      setTime(formattedTime);
+      setTime(
+        new Intl.DateTimeFormat('az-AZ', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(now)
+      );
     }
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -50,11 +60,12 @@ export default function Header() {
         );
         if (!response.ok) return;
         const data = await response.json();
-        if (data?.current?.temperature_2m !== undefined) {
-          const temperature = Math.round(
-            data.current.temperature_2m
+        const temperature =
+          data?.current?.temperature_2m;
+        if (temperature !== undefined) {
+          setWeather(
+            `Bakı ${Math.round(temperature)}°C`
           );
-          setWeather(`Bakı ${temperature}°C`);
         }
       } catch {
         setWeather('Bakı');
@@ -85,10 +96,10 @@ export default function Header() {
             href="/"
             className="flex items-center gap-3 shrink-0"
           >
-            <div className="w-11 h-11 rounded-full bg-gray-900 flex items-center justify-center shadow-sm">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center">
               <svg
-                width="30"
-                height="30"
+                width="34"
+                height="34"
                 viewBox="0 0 40 40"
                 fill="none"
               >
@@ -96,12 +107,12 @@ export default function Header() {
                   cx="20"
                   cy="20"
                   r="17"
-                  stroke="white"
+                  stroke="#111827"
                   strokeWidth="2"
                 />
                 <path
                   d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
-                  stroke="white"
+                  stroke="#1D4E89"
                   strokeWidth="2.5"
                   fill="none"
                   strokeLinecap="round"
@@ -138,7 +149,9 @@ export default function Header() {
                 <button
                   key={code}
                   type="button"
-                  onClick={() => changeLanguage(code)}
+                  onClick={() =>
+                    changeLanguage(code)
+                  }
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition ${
                     language === code
                       ? 'bg-gray-900 text-white'
@@ -180,7 +193,9 @@ export default function Header() {
         >
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) =>
+              setQ(e.target.value)
+            }
             placeholder={t.search}
             className="flex-1 bg-transparent px-4 py-2 text-sm outline-none"
           />
