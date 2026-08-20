@@ -82,7 +82,7 @@ export default function Footer() {
               </p>
 
               <p className="break-all">
-                📧 narimanovvyap@gmail.com
+                📧 panoramaxeber@gmail.com
               </p>
 
             </div>
