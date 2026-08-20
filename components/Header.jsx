@@ -9,36 +9,32 @@ export default function Header() {
   const router = useRouter();
 
   const [q, setQ] = useState('');
-  const [dateTime, setDateTime] = useState('');
+  const [time, setTime] = useState('');
   const [weather, setWeather] = useState(null);
 
+  // SAAT
   useEffect(() => {
-    function updateDateTime() {
+    function updateTime() {
       const now = new Date();
 
-      const date = new Intl.DateTimeFormat('az-AZ', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      }).format(now);
-
-      const time = new Intl.DateTimeFormat('az-AZ', {
+      const currentTime = new Intl.DateTimeFormat('az-AZ', {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: false,
       }).format(now);
 
-      setDateTime(`${date} · ${time}`);
+      setTime(currentTime);
     }
 
-    updateDateTime();
+    updateTime();
 
-    const timer = setInterval(updateDateTime, 1000);
+    const timer = setInterval(updateTime, 1000);
 
     return () => clearInterval(timer);
   }, []);
 
+  // BAKI HAVA PROQNOZU
   useEffect(() => {
     async function getWeather() {
       try {
@@ -81,6 +77,7 @@ export default function Header() {
     return '🌤️';
   }
 
+  // AXTARIŞ
   function handleSearch(e) {
     e.preventDefault();
 
@@ -104,65 +101,62 @@ export default function Header() {
 
           <div className="flex items-center justify-between min-h-[36px]">
 
+            {/* SAAT + HAVA */}
+
             <div className="flex items-center gap-4 text-[10px] sm:text-xs">
 
-              <span className="text-gray-300">
-                {dateTime}
+              <span className="font-medium text-gray-300">
+                {time}
               </span>
 
               <span className="hidden sm:inline text-gray-600">
                 |
               </span>
 
-              <span className="hidden sm:flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
+
                 {weather
                   ? getWeatherIcon(weather.weather_code)
                   : '🌤️'}
 
-                <span>
+                <span className="text-gray-300">
                   Bakı
                 </span>
 
-                <span className="font-bold">
+                <span className="font-bold text-white">
                   {weather
                     ? `${Math.round(weather.temperature_2m)}°C`
                     : '...'}
                 </span>
+
               </span>
 
             </div>
 
-            {/* SOSİAL İŞARƏLƏR */}
+            {/* DİL SEÇİMİ */}
 
             <div className="flex items-center gap-1">
 
-              <span
-                title="Instagram"
-                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs"
+              <button
+                type="button"
+                className="px-2 py-1 text-[10px] font-bold text-white bg-white/10 hover:bg-white/20 transition"
               >
-                ◎
-              </span>
+                AZ
+              </button>
 
-              <span
-                title="Facebook"
-                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs font-bold"
+              <button
+                type="button"
+                className="px-2 py-1 text-[10px] font-bold text-gray-400 hover:text-white transition"
               >
-                f
-              </span>
+                RU
+              </button>
 
-              <span
-                title="Telegram"
-                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs"
+              <button
+                type="button"
+                className="px-2 py-1 text-[10px] font-bold text-gray-400 hover:text-white transition"
               >
-                ✈
-              </span>
-
-              <span
-                title="YouTube"
-                className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-[9px]"
-              >
-                ▶
-              </span>
+                EN
+              </button>
 
             </div>
 
@@ -177,6 +171,8 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5">
 
         <div className="flex items-center justify-between gap-5">
+
+          {/* LOGO */}
 
           <Link
             href="/"
@@ -275,34 +271,6 @@ export default function Header() {
         </div>
 
       </nav>
-
-      {/* SON XƏBƏRLƏR */}
-
-      <div className="border-b border-line bg-white">
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-
-          <div className="flex items-center h-9 gap-3">
-
-            <div className="flex items-center gap-2 pr-4 border-r border-line">
-
-              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-
-              <span className="text-[10px] font-bold uppercase tracking-widest text-red-600 whitespace-nowrap">
-                SON XƏBƏRLƏR
-              </span>
-
-            </div>
-
-            <span className="text-xs text-gray-500 truncate">
-              PANORAMA — Azərbaycanın gündəm xəbərləri
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
 
       {/* MOBİL AXTARIŞ */}
 
