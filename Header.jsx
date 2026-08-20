@@ -5,29 +5,113 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { CATEGORIES } from '@/lib/categories';
 
+const LANGUAGES = [
+  { code: 'az', label: 'AZ', flag: '🇦🇿' },
+  { code: 'ru', label: 'RU', flag: '🇷🇺' },
+  { code: 'en', label: 'EN', flag: '🇬🇧' },
+];
+
+const translations = {
+  az: {
+    portal: 'Xəbər Portalı',
+    search: 'Axtar',
+    searchNews: 'Xəbər axtar...',
+    home: 'Əsas səhifə',
+  },
+
+  ru: {
+    portal: 'Новостной портал',
+    search: 'Поиск',
+    searchNews: 'Поиск новостей...',
+    home: 'Главная',
+  },
+
+  en: {
+    portal: 'News Portal',
+    search: 'Search',
+    searchNews: 'Search news...',
+    home: 'Home',
+  },
+};
+
 export default function Header() {
   const router = useRouter();
+
   const [q, setQ] = useState('');
   const [dateTime, setDateTime] = useState('');
+  const [language, setLanguage] = useState('az');
 
+  // =========================
+  // DİLİ YADDA SAXLA
+  // =========================
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem(
+      'panorama-language'
+    );
+
+    if (
+      savedLanguage === 'az' ||
+      savedLanguage === 'ru' ||
+      savedLanguage === 'en'
+    ) {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  // =========================
+  // DİL DƏYİŞ
+  // =========================
+
+  function changeLanguage(code) {
+    setLanguage(code);
+
+    localStorage.setItem(
+      'panorama-language',
+      code
+    );
+
+    window.location.reload();
+  }
+
+  // =========================
   // TARİX VƏ SAAT
+  // =========================
+
   useEffect(() => {
     function updateDateTime() {
       const now = new Date();
 
-      const date = new Intl.DateTimeFormat('az-AZ', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(now);
+      const locales = {
+        az: 'az-AZ',
+        ru: 'ru-RU',
+        en: 'en-GB',
+      };
 
-      const time = new Intl.DateTimeFormat('az-AZ', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(now);
+      const locale =
+        locales[language] || 'az-AZ';
 
-      setDateTime(`${date} · ${time}`);
+      const date = new Intl.DateTimeFormat(
+        locale,
+        {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }
+      ).format(now);
+
+      const time = new Intl.DateTimeFormat(
+        locale,
+        {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }
+      ).format(now);
+
+      setDateTime(
+        `${date} · ${time}`
+      );
     }
 
     updateDateTime();
@@ -37,15 +121,26 @@ export default function Header() {
       60000
     );
 
-    return () => clearInterval(interval);
-  }, []);
+    return () =>
+      clearInterval(interval);
+  }, [language]);
+
+  const t =
+    translations[language] ||
+    translations.az;
+
+  // =========================
+  // AXTARIŞ
+  // =========================
 
   function handleSearch(e) {
     e.preventDefault();
 
     if (q.trim()) {
       router.push(
-        `/axtar?q=${encodeURIComponent(q.trim())}`
+        `/axtar?q=${encodeURIComponent(
+          q.trim()
+        )}`
       );
     }
   }
@@ -53,9 +148,11 @@ export default function Header() {
   return (
     <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
 
-      {/* ================= YUXARI HİSSƏ ================= */}
+      {/* =========================
+          YUXARI HİSSƏ
+      ========================= */}
 
-      <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
 
         <div className="flex items-center justify-between gap-4">
 
@@ -63,39 +160,50 @@ export default function Header() {
 
           <Link
             href="/"
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 flex-shrink-0"
           >
 
-            <svg
-              width="34"
-              height="34"
-              viewBox="0 0 40 40"
-              fill="none"
-            >
-              <circle
-                cx="20"
-                cy="20"
-                r="18"
-                stroke="#10151C"
-                strokeWidth="2"
-              />
+            <div className="w-[34px] h-[34px] flex-shrink-0">
 
-              <path
-                d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
-                stroke="#1D4E89"
-                strokeWidth="2"
-                fill="none"
-              />
-            </svg>
+              <svg
+                width="34"
+                height="34"
+                viewBox="0 0 40 40"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="18"
+                  fill="white"
+                  stroke="#10151C"
+                  strokeWidth="2"
+                />
+
+                <path
+                  d="M8 22C12 18 16 26 20 20C24 14 28 22 32 18"
+                  stroke="#1D4E89"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+
+              </svg>
+
+            </div>
 
             <div>
+
               <div className="font-serif text-2xl font-bold tracking-tight">
                 PANORAMA
               </div>
 
               <div className="text-[10px] uppercase tracking-widest text-gray-500">
-                Xəbər Portalı
+                {t.portal}
               </div>
+
             </div>
 
           </Link>
@@ -104,7 +212,34 @@ export default function Header() {
 
           <div className="flex flex-col items-end gap-2">
 
-            {/* TARİX + SAAT */}
+            {/* =========================
+                DİL DÜYMƏLƏRİ
+            ========================= */}
+
+            <div className="flex items-center gap-1">
+
+              {LANGUAGES.map((lang) => (
+
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() =>
+                    changeLanguage(lang.code)
+                  }
+                  className={`text-xs px-2 py-1 border ${
+                    language === lang.code
+                      ? 'bg-ink text-white border-ink'
+                      : 'border-line text-gray-500'
+                  }`}
+                >
+                  {lang.flag} {lang.label}
+                </button>
+
+              ))}
+
+            </div>
+
+            {/* TARİX */}
 
             {dateTime && (
               <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
@@ -112,7 +247,7 @@ export default function Header() {
               </div>
             )}
 
-            {/* AXTARIŞ */}
+            {/* DESKTOP AXTARIŞ */}
 
             <form
               onSubmit={handleSearch}
@@ -124,7 +259,7 @@ export default function Header() {
                 onChange={(e) =>
                   setQ(e.target.value)
                 }
-                placeholder="Axtar..."
+                placeholder={t.search}
                 className="px-3 py-1.5 text-sm outline-none w-52"
               />
 
@@ -132,7 +267,7 @@ export default function Header() {
                 type="submit"
                 className="bg-ink text-white px-3 py-1.5 text-sm"
               >
-                Axtar
+                {t.search}
               </button>
 
             </form>
@@ -143,20 +278,23 @@ export default function Header() {
 
       </div>
 
-      {/* ================= NAVİQASİYA ================= */}
+      {/* =========================
+          NAVİQASİYA
+      ========================= */}
 
       <nav className="bg-ink overflow-x-auto">
 
-        <div className="max-w-6xl mx-auto px-6 flex items-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center">
 
           <Link
             href="/"
             className="text-gray-300 hover:text-white text-sm font-semibold px-3 py-3 whitespace-nowrap"
           >
-            Əsas səhifə
+            {t.home}
           </Link>
 
           {CATEGORIES.map((c) => (
+
             <Link
               key={c.slug}
               href={`/${c.slug}`}
@@ -164,13 +302,16 @@ export default function Header() {
             >
               {c.name}
             </Link>
+
           ))}
 
         </div>
 
       </nav>
 
-      {/* ================= MOBİL AXTARIŞ ================= */}
+      {/* =========================
+          MOBİL AXTARIŞ
+      ========================= */}
 
       <form
         onSubmit={handleSearch}
@@ -182,7 +323,7 @@ export default function Header() {
           onChange={(e) =>
             setQ(e.target.value)
           }
-          placeholder="Xəbər axtar..."
+          placeholder={t.searchNews}
           className="flex-1 px-4 py-2 text-sm outline-none"
         />
 
@@ -190,7 +331,7 @@ export default function Header() {
           type="submit"
           className="bg-ink text-white px-4 text-sm"
         >
-          Axtar
+          {t.search}
         </button>
 
       </form>
