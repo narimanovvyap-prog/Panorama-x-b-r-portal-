@@ -5,8 +5,54 @@ import NewsTicker from '@/components/NewsTicker';
 import { supabase } from '@/lib/supabaseClient';
 
 export const metadata = {
-  title: 'PANORAMA — Xəbər Portalı',
-  description: 'Gündəlik xəbər portalı',
+  metadataBase: new URL('https://panoramaxeber.info.az'),
+
+  title: {
+    default: 'PANORAMA — Xəbər Portalı',
+    template: '%s | PANORAMA',
+  },
+
+  description:
+    'PANORAMA — Azərbaycandan və dünyadan ən son xəbərlər.',
+
+  applicationName: 'PANORAMA',
+
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
+
+  openGraph: {
+    title: 'PANORAMA — Xəbər Portalı',
+    description:
+      'Azərbaycandan və dünyadan ən son xəbərlər.',
+    url: 'https://panoramaxeber.info.az',
+    siteName: 'PANORAMA',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'PANORAMA — Xəbər Portalı',
+      },
+    ],
+    locale: 'az_AZ',
+    type: 'website',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PANORAMA — Xəbər Portalı',
+    description:
+      'Azərbaycandan və dünyadan ən son xəbərlər.',
+    images: ['/logo.png'],
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 async function getLatestNews() {
