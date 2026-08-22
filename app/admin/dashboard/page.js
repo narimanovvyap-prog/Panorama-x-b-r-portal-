@@ -1257,3183 +1257,704 @@ VIDEO
 ========================================================= */
 
 function VideoForm() {
-const [title, setTitle] = useState('');
-const [excerpt, setExcerpt] = useState('');
-const [category, setCategory] = useState(
-CATEGORIES?.[0]?.slug || ''
-);
-const [source, setSource] = useState('');
-const [video, setVideo] = useState(null);
-const [loading, setLoading] = useState(false);
-const [message, setMessage] = useState(null);
-
-async function publishVideo(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Video başlığı yazılmalıdır.'
-);
-}
-
-if (!video) {
-throw new Error(
-'Video seçilməyib.'
-);
-}
-
-const maxSize =
-100 * 1024 * 1024;
-
-if (video.size > maxSize) {
-throw new Error(
-'Video çox böyükdür. Maksimum 100 MB video yükləyə bilərsən.'
-);
-}
-
-const extension =
-video.name.split('.').pop()?.toLowerCase() ||
-'mp4';
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-const { error: uploadError } =
-await supabase.storage
-.from(VIDEO_BUCKET)
-.upload(fileName, video, {
-cacheControl: '3600',
-upsert: false,
-contentType: video.type || undefined,
-});
-
-if (uploadError) {
-throw new Error(
-`Video yüklənmədi: ${uploadError.message}`
-);
-}
-
-const { data: publicUrlData } =
-supabase.storage
-.from(VIDEO_BUCKET)
-.getPublicUrl(fileName);
-
-if (!publicUrlData?.publicUrl) {
-throw new Error(
-'Video yükləndi, amma public link alınmadı.'
-);
-}
-
-const slug =
-slugify(title) + '-' + Date.now();
-
-const { error: insertError } =
-await supabase
-.from('articles')
-.insert({
-title: title.trim(),
-excerpt: excerpt.trim(),
-content: excerpt.trim(),
-category,
-source: source.trim(),
-image_url: '',
-video_url: publicUrlData.publicUrl,
-slug,
-is_featured: false,
-views: 0,
-});
-
-if (insertError) {
-await supabase.storage
-.from(VIDEO_BUCKET)
-.remove([fileName]);
-
-throw new Error(
-`Video xəbəri bazaya əlavə olunmadı: ${insertError.message}`
-);
-}
-
-setTitle('');
-setExcerpt('');
-setSource('');
-setVideo(null);
-
-setMessage({
-status: 'success',
-text: 'Video xəbər uğurla yayımlandı.',
-});
-} catch (error) {
-console.error('VIDEO ERROR:', error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Video yüklənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<FormShell
-eyebrow="Video deski · VID"
-title="Video paylaş"
-description="Kompüterindən video seç və saytda yayımla."
-onSubmit={publishVideo}
->
-<TextField
-label="Video başlığı"
-value={title}
-onChange={setTitle}
-placeholder="Video xəbərin başlığı..."
-required
-/>
-
-<TextAreaField
-label="Açıqlama"
-value={excerpt}
-onChange={setExcerpt}
-placeholder="Video haqqında qısa məlumat..."
-rows={4}
-/>
-
-<div className="grid md:grid-cols-2 gap-5 mb-6">
-<CategorySelect
-value={category}
-onChange={setCategory}
-/>
-
-<TextField
-label="Mənbə"
-value={source}
-onChange={setSource}
-placeholder="Mənbə"
-/>
-</div>
-
-<div className="mb-6">
-<FieldLabel required>
-Video faylı
-</FieldLabel>
-
-<FileDropZone
-selected={video?.name}
-onSelect={(e) => {
-const selected =
-e.target.files?.[0] || null;
-
-setVideo(selected);
-setMessage(null);
-}}
-accept="video/mp4,video/webm,video/quicktime,video/*"
-icon="🎥"
-activeIcon="🎬"
-title="Video seç"
-hint={
-video
-? `${video.name} — ${(video.size / 1024 / 1024).toFixed(1)} MB`
-: 'MP4, MOV, WebM — maksimum 100 MB'
-}
-minHeight={220}
-/>
-</div>
-
-{video && (
-<div
-className="mb-6 border px-4 py-3 text-sm"
-style={{
-borderColor: c.line,
-background: '#FAFAF8',
-}}
->
-<div className="font-semibold">
-Seçilmiş video
-</div>
-
-<div
-className="text-xs mt-1"
-style={{ color: c.muted }}
->
-{video.name}
-</div>
-
-<div
-className="text-xs mt-1"
-style={{ color: c.muted }}
->
-Ölçü:{' '}
-{(video.size / 1024 / 1024).toFixed(2)} MB
-</div>
-</div>
-)}
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="mt-6">
-<SubmitButton
-loading={loading}
-loadingText="Video yüklənir..."
->
-🎥 Videonu yayımla
-</SubmitButton>
-</div>
-</FormShell>
-);
-}
-
-/* =========================================================
-FOTO QALEREYA
-========================================================= */
-
-function GalleryForm() {
-const [title, setTitle] = useState('');
-const [description, setDescription] =
-useState('');
-const [category, setCategory] =
-useState(CATEGORIES?.[0]?.slug || '');
-const [images, setImages] = useState([]);
-const [loading, setLoading] = useState(false);
-const [message, setMessage] = useState(null);
-
-function selectImages(e) {
-setImages(
-Array.from(e.target.files || [])
-);
-
-setMessage(null);
-}
-
-function removeImage(index) {
-setImages((current) =>
-current.filter((_, i) => i !== index)
-);
-}
-
-async function publishGallery(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Qalereyanın başlığını yaz.'
-);
-}
-
-if (images.length === 0) {
-throw new Error(
-'Ən azı bir şəkil seç.'
-);
-}
-
-const uploadedImages = [];
-
-for (const image of images) {
-const extension =
-image.name.split('.').pop()?.toLowerCase() ||
-'jpg';
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-const { error: uploadError } =
-await supabase.storage
-.from(GALLERY_BUCKET)
-.upload(fileName, image, {
-cacheControl: '3600',
-upsert: false,
-contentType: image.type || undefined,
-});
-
-if (uploadError) {
-throw new Error(
-`Şəkil yüklənmədi: ${uploadError.message}`
-);
-}
-
-const { data: publicUrlData } =
-supabase.storage
-.from(GALLERY_BUCKET)
-.getPublicUrl(fileName);
-
-uploadedImages.push(
-publicUrlData.publicUrl
-);
-}
-
-const { error: insertError } =
-await supabase
-.from('photo_galleries')
-.insert({
-title: title.trim(),
-description: description.trim(),
-category,
-images: uploadedImages,
-});
-
-if (insertError) {
-throw insertError;
-}
-
-setTitle('');
-setDescription('');
-setImages([]);
-
-setMessage({
-status: 'success',
-text: 'Foto qalereya uğurla yayımlandı.',
-});
-} catch (error) {
-console.error(
-'GALLERY ERROR:',
-error
-);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Qalereya yaradılmadı.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<FormShell
-eyebrow="Foto deski · GAL"
-title="Foto qalereya paylaş"
-description="Bir xəbərə bir neçə şəkil əlavə et."
-onSubmit={publishGallery}
->
-<TextField
-label="Qalereya başlığı"
-value={title}
-onChange={setTitle}
-placeholder="Məsələn: Bakıda möhtəşəm tədbir"
-required
-/>
-
-<TextAreaField
-label="Açıqlama"
-value={description}
-onChange={setDescription}
-placeholder="Qalereya haqqında məlumat..."
-rows={4}
-/>
-
-<div className="mb-6">
-<CategorySelect
-value={category}
-onChange={setCategory}
-/>
-</div>
-
-<div className="mb-6">
-<FieldLabel required>
-Şəkillər
-</FieldLabel>
-
-<FileDropZone
-selected={
-images.length
-? `${images.length} şəkil seçildi`
-: null
-}
-onSelect={selectImages}
-accept="image/*"
-multiple
-icon="📸"
-activeIcon="📸"
-title="Bir neçə şəkil seç"
-hint="Bir neçə şəkil seçə bilərsən"
-minHeight={200}
-/>
-</div>
-
-{images.length > 0 && (
-<div className="mb-6">
-<div className="flex items-center justify-between mb-3">
-<div
-className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.15em]"
-style={{ color: c.muted }}
->
-Seçilmiş şəkillər
-</div>
-
-<div
-className="text-xs"
-style={{ color: c.muted }}
->
-{images.length} şəkil
-</div>
-</div>
-
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-{images.map((image, index) => (
-<div
-key={`${image.name}-${index}`}
-className="relative border aspect-square overflow-hidden"
-style={{
-borderColor: c.line,
-background: '#F0EFEA',
-}}
->
-<img
-src={URL.createObjectURL(image)}
-alt={image.name}
-className="w-full h-full object-cover"
-/>
-
-<button
-type="button"
-onClick={() =>
-removeImage(index)
-}
-className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 text-white text-xs leading-none"
->
-✕
-</button>
-
-<div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-2 py-1 truncate font-[family-name:var(--font-mono)]">
-{index + 1}. {image.name}
-</div>
-</div>
-))}
-</div>
-</div>
-)}
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="mt-6">
-<SubmitButton
-loading={loading}
-loadingText="Şəkillər yüklənir..."
->
-📸 Qalereyanı yayımla
-</SubmitButton>
-</div>
-</FormShell>
-);
-}
-
-/* =========================================================
-REKLAM
-========================================================= */
-
-function AdvertisementForm() {
-const [title, setTitle] = useState('');
-const [linkUrl, setLinkUrl] = useState('');
-const [position, setPosition] =
-useState('homepage');
-const [startDate, setStartDate] = useState('');
-const [endDate, setEndDate] = useState('');
-const [image, setImage] = useState(null);
-const [loading, setLoading] = useState(false);
-const [message, setMessage] = useState(null);
-
-async function publishAdvertisement(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Reklam adı yazılmalıdır.'
-);
-}
-
-let imageUrl = '';
-
-if (image) {
-const extension =
-image.name.split('.').pop()?.toLowerCase() ||
-'jpg';
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-const { error: uploadError } =
-await supabase.storage
-.from(AD_BUCKET)
-.upload(fileName, image, {
-cacheControl: '3600',
-upsert: false,
-contentType: image.type || undefined,
-});
-
-if (uploadError) {
-throw uploadError;
-}
-
-const { data } =
-supabase.storage
-.from(AD_BUCKET)
-.getPublicUrl(fileName);
-
-imageUrl =
-data?.publicUrl || '';
-}
-
-const { error: insertError } =
-await supabase
-.from('advertisements')
-.insert({
-title: title.trim(),
-image_url: imageUrl,
-link_url: linkUrl.trim(),
-position,
-start_date: startDate || null,
-end_date: endDate || null,
-is_active: true,
-});
-
-if (insertError) {
-throw insertError;
-}
-
-setTitle('');
-setLinkUrl('');
-setStartDate('');
-setEndDate('');
-setImage(null);
-
-setMessage({
-status: 'success',
-text: 'Reklam uğurla əlavə edildi.',
-});
-} catch (error) {
-console.error(
-'ADVERTISEMENT ERROR:',
-error
-);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Reklam əlavə olunmadı.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<FormShell
-eyebrow="Reklam deski · REK"
-title="Yeni reklam"
-description="Saytda göstəriləcək reklamı əlavə et."
-onSubmit={publishAdvertisement}
->
-<TextField
-label="Reklam adı"
-value={title}
-onChange={setTitle}
-placeholder="Reklamın adı..."
-required
-/>
-
-<TextField
-label="Keçid linki"
-value={linkUrl}
-onChange={setLinkUrl}
-placeholder="https://..."
-/>
-
-<div className="grid md:grid-cols-3 gap-5 mb-6">
-<SelectField
-label="Mövqe"
-value={position}
-onChange={setPosition}
-options={
-<>
-<option value="homepage">
-Əsas səhifə
-</option>
-
-<option value="both">
-Əsas səhifə + digər
-</option>
-</>
-}
-/>
-
-<div>
-<FieldLabel>
-Başlama tarixi
-</FieldLabel>
-
-<input
-type="datetime-local"
-value={startDate}
-onChange={(e) =>
-setStartDate(e.target.value)
-}
-className={fieldClass}
-style={{ borderColor: c.line }}
-/>
-</div>
-
-<div>
-<FieldLabel>
-Bitmə tarixi
-</FieldLabel>
-
-<input
-type="datetime-local"
-value={endDate}
-onChange={(e) =>
-setEndDate(e.target.value)
-}
-className={fieldClass}
-style={{ borderColor: c.line }}
-/>
-</div>
-</div>
-
-<div className="mb-6">
-<FieldLabel>
-Reklam şəkli
-</FieldLabel>
-
-<FileDropZone
-selected={image?.name}
-onSelect={(e) =>
-setImage(
-e.target.files?.[0] || null
-)
-}
-accept="image/*"
-icon="📢"
-activeIcon="🖼️"
-title="Reklam şəklini seç"
-hint=""
-minHeight={180}
-/>
-</div>
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="mt-6">
-<SubmitButton
-loading={loading}
-loadingText="Yüklənir..."
->
-📢 Reklamı əlavə et
-</SubmitButton>
-</div>
-</FormShell>
-);
-}
-
-/* =========================================================
-PAYLAŞIMLARI İDARƏ ET
-========================================================= */
-
-function ManageContent() {
-const [tab, setTab] = useState('articles');
-
-return (
-<div>
-<PageHeading
-eyebrow="İdarəetmə · MNG"
-title="Paylaşımları idarə et"
-description="Saytda olan xəbərləri, videoları, qalereyaları və reklamları redaktə et və ya sil."
-/>
-
-<div
-className="flex flex-wrap gap-2 mb-6 p-1 border"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<ManageTab
-active={tab === 'articles'}
-onClick={() => setTab('articles')}
->
-📰 Xəbərlər
-</ManageTab>
-
-<ManageTab
-active={tab === 'videos'}
-onClick={() => setTab('videos')}
->
-🎥 Videolar
-</ManageTab>
-
-<ManageTab
-active={tab === 'galleries'}
-onClick={() => setTab('galleries')}
->
-📸 Qalereyalar
-</ManageTab>
-
-<ManageTab
-active={tab === 'ads'}
-onClick={() => setTab('ads')}
->
-📢 Reklamlar
-</ManageTab>
-</div>
-
-{tab === 'articles' && (
-<ArticleManager type="news" />
-)}
-
-{tab === 'videos' && (
-<ArticleManager type="video" />
-)}
-
-{tab === 'galleries' && (
-<GalleryManager />
-)}
-
-{tab === 'ads' && (
-<AdvertisementManager />
-)}
-</div>
-);
-}
-
-function ManageTab({
-active,
-onClick,
-children,
-}) {
-return (
-<button
-type="button"
-onClick={onClick}
-className="px-4 py-3 text-sm font-semibold transition-colors"
-style={{
-background: active ? c.ink : 'transparent',
-color: active ? '#fff' : c.text,
-}}
->
-{children}
-</button>
-);
-}
-
-/* =========================================================
-ARTICLE MANAGER
-========================================================= */
-
-function ArticleManager({ type }) {
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [search, setSearch] = useState('');
-const [editing, setEditing] = useState(null);
-const [message, setMessage] = useState(null);
-
-useEffect(() => {
-loadItems();
-}, [type]);
-
-async function loadItems() {
-setLoading(true);
-
-try {
-let query = supabase
-.from('articles')
-.select(
-'id,title,excerpt,content,category,source,image_url,video_url,slug,is_featured,views,created_at'
-)
-.order('created_at', {
-ascending: false,
-});
-
-if (type === 'news') {
-query = query.is('video_url', null);
-} else {
-query = query.not('video_url', 'is', null);
-}
-
-const { data, error } = await query;
-
-if (error) {
-throw error;
-}
-
-setItems(data || []);
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Paylaşımlar yüklənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-const filtered = items.filter((item) =>
-`${item.title} ${item.source || ''}`
-.toLowerCase()
-.includes(search.toLowerCase())
-);
-
-async function deleteArticle(item) {
-const confirmed = window.confirm(
-`“${item.title}” paylaşımını silmək istədiyinə əminsən? Bu əməliyyat geri qaytarılmır.`
-);
-
-if (!confirmed) return;
-
-try {
-setMessage(null);
-
-const filesToDelete = [];
-
-if (item.image_url) {
-const imagePath =
-getStoragePathFromPublicUrl(
-item.image_url,
-NEWS_IMAGE_BUCKET
-);
-
-if (imagePath) {
-filesToDelete.push({
-bucket: NEWS_IMAGE_BUCKET,
-path: imagePath,
-});
-}
-}
-
-if (item.video_url) {
-const videoPath =
-getStoragePathFromPublicUrl(
-item.video_url,
-VIDEO_BUCKET
-);
-
-if (videoPath) {
-filesToDelete.push({
-bucket: VIDEO_BUCKET,
-path: videoPath,
-});
-}
-}
-
-const { error } =
-await supabase
-.from('articles')
-.delete()
-.eq('id', item.id);
-
-if (error) {
-throw error;
-}
-
-for (const file of filesToDelete) {
-await supabase.storage
-.from(file.bucket)
-.remove([file.path]);
-}
-
-setItems((current) =>
-current.filter(
-(article) =>
-article.id !== item.id
-)
-);
-
-setMessage({
-status: 'success',
-text: 'Paylaşım uğurla silindi.',
-});
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Paylaşım silinmədi.',
-});
-}
-}
-
-return (
-<div>
-<div
-className="border p-4 mb-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<input
-value={search}
-onChange={(e) =>
-setSearch(e.target.value)
-}
-placeholder={
-type === 'news'
-? 'Xəbərlərdə axtar...'
-: 'Videolarda axtar...'
-}
-className={fieldClass}
-style={{ borderColor: c.line }}
-/>
-</div>
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-{loading ? (
-<LoadingBox text="Paylaşımlar yüklənir..." />
-) : filtered.length === 0 ? (
-<EmptyState
-text={
-search
-? 'Axtarışa uyğun paylaşım tapılmadı.'
-: type === 'news'
-? 'Hələ xəbər yoxdur.'
-: 'Hələ video yoxdur.'
-}
-/>
-) : (
-<div className="space-y-3 mt-5">
-{filtered.map((item) => (
-<ArticleManageCard
-key={item.id}
-item={item}
-type={type}
-onEdit={() =>
-setEditing(item)
-}
-onDelete={() =>
-deleteArticle(item)
-}
-/>
-))}
-</div>
-)}
-
-{editing && (
-<EditArticleModal
-item={editing}
-type={type}
-onClose={() => setEditing(null)}
-onSaved={(updated) => {
-setItems((current) =>
-current.map((item) =>
-item.id === updated.id
-? updated
-: item
-)
-);
-
-setEditing(null);
-
-setMessage({
-status: 'success',
-text: 'Paylaşım uğurla yeniləndi.',
-});
-}}
-/>
-)}
-</div>
-);
-}
-
-/* =========================================================
-ARTICLE CARD
-========================================================= */
-
-function ArticleManageCard({
-item,
-type,
-onEdit,
-onDelete,
-}) {
-return (
-<div
-className="border p-4 md:p-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div className="flex flex-col md:flex-row gap-4 md:items-center">
-<div className="w-full md:w-32 h-24 shrink-0 bg-[#F0EFEA] overflow-hidden">
-{item.video_url ? (
-<video
-src={item.video_url}
-className="w-full h-full object-cover"
-muted
-preload="metadata"
-/>
-) : item.image_url ? (
-<img
-src={item.image_url}
-alt={item.title}
-className="w-full h-full object-cover"
-/>
-) : (
-<div className="w-full h-full flex items-center justify-center text-3xl">
-📰
-</div>
-)}
-</div>
-
-<div className="flex-1 min-w-0">
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mb-1"
-style={{ color: c.gold }}
->
-{type === 'video'
-? '🎥 Video'
-: '📰 Xəbər'}
-</div>
-
-<h3 className="font-[family-name:var(--font-display)] font-bold text-lg truncate">
-{item.title}
-</h3>
-
-<p
-className="text-sm mt-1 line-clamp-2"
-style={{ color: c.muted }}
->
-{item.excerpt ||
-item.content ||
-'Açıqlama yoxdur.'}
-</p>
-
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mt-2"
-style={{ color: c.muted }}
->
-{item.source || 'Mənbə yoxdur'} ·{' '}
-{item.views || 0} baxış
-</div>
-</div>
-
-<div className="flex md:flex-col gap-2 shrink-0">
-<button
-type="button"
-onClick={onEdit}
-className="px-4 py-2 text-sm font-semibold border transition-colors hover:bg-black/[0.04]"
-style={{
-borderColor: c.line,
-color: c.blue,
-}}
->
-✏️ Redaktə
-</button>
-
-<button
-type="button"
-onClick={onDelete}
-className="px-4 py-2 text-sm font-semibold border transition-colors hover:bg-[#FBEEEC]"
-style={{
-borderColor: '#E8C7C2',
-color: c.danger,
-}}
->
-🗑️ Sil
-</button>
-</div>
-</div>
-</div>
-);
-}
-
-/* =========================================================
-EDIT ARTICLE MODAL
-========================================================= */
-
-function EditArticleModal({
-item,
-type,
-onClose,
-onSaved,
-}) {
-const [title, setTitle] =
-useState(item.title || '');
-
-const [excerpt, setExcerpt] =
-useState(item.excerpt || '');
-
-const [content, setContent] =
-useState(item.content || '');
-
-const [category, setCategory] =
-useState(
-item.category ||
-CATEGORIES?.[0]?.slug ||
-''
-);
-
-const [source, setSource] =
-useState(item.source || '');
-
-const [featured, setFeatured] =
-useState(Boolean(item.is_featured));
-
-const [newFile, setNewFile] =
-useState(null);
-
-const [loading, setLoading] =
-useState(false);
-
-const [message, setMessage] =
-useState(null);
-
-async function saveChanges(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Başlıq boş ola bilməz.'
-);
-}
-
-let imageUrl =
-item.image_url || '';
-
-let videoUrl =
-item.video_url || '';
-
-let oldFileToDelete = null;
-let newBucket = null;
-
-if (newFile) {
-const extension =
-newFile.name
-.split('.')
-.pop()
-?.toLowerCase() ||
-(type === 'video'
-? 'mp4'
-: 'jpg');
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-newBucket =
-type === 'video'
-? VIDEO_BUCKET
-: NEWS_IMAGE_BUCKET;
-
-const { error } =
-await supabase.storage
-.from(newBucket)
-.upload(
-fileName,
-newFile,
-{
-cacheControl: '3600',
-upsert: false,
-contentType:
-newFile.type ||
-undefined,
-}
-);
-
-if (error) {
-throw new Error(
-`Fayl yüklənmədi: ${error.message}`
-);
-}
-
-const { data } =
-supabase.storage
-.from(newBucket)
-.getPublicUrl(
-fileName
-);
-
-if (!data?.publicUrl) {
-throw new Error(
-'Yeni faylın public linki alınmadı.'
-);
-}
-
-if (type === 'video') {
-videoUrl = data.publicUrl;
-
-if (item.video_url) {
-oldFileToDelete = {
-bucket: VIDEO_BUCKET,
-path:
-getStoragePathFromPublicUrl(
-item.video_url,
-VIDEO_BUCKET
-),
-};
-}
-} else {
-imageUrl = data.publicUrl;
-
-if (item.image_url) {
-oldFileToDelete = {
-bucket: NEWS_IMAGE_BUCKET,
-path:
-getStoragePathFromPublicUrl(
-item.image_url,
-NEWS_IMAGE_BUCKET
-),
-};
-}
-}
-}
-
-const slug =
-item.slug ||
-slugify(title) +
-'-' +
-Date.now();
-
-const { data, error } =
-await supabase
-.from('articles')
-.update({
-title: title.trim(),
-excerpt: excerpt.trim(),
-content: content.trim(),
-category,
-source: source.trim(),
-image_url: imageUrl,
-video_url: videoUrl || null,
-slug,
-is_featured:
-type === 'news'
-? featured
-: false,
-})
-.eq('id', item.id)
-.select()
-.single();
-
-if (error) {
-throw error;
-}
-
-if (
-oldFileToDelete?.path
-) {
-await supabase.storage
-.from(
-oldFileToDelete.bucket
-)
-.remove([
-oldFileToDelete.path,
-]);
-}
-
-onSaved(data);
-} catch (error) {
-console.error(
-'EDIT ERROR:',
-error
-);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Dəyişiklik yadda saxlanmadı.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-<div
-className="w-full max-w-3xl max-h-[90vh] overflow-y-auto"
-style={{
-background: c.surface,
-}}
->
-<div
-className="sticky top-0 z-10 px-6 py-5 border-b flex items-center justify-between"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div>
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-[0.2em]"
-style={{ color: c.gold }}
->
-{type === 'video'
-? 'Video redaktəsi'
-: 'Xəbər redaktəsi'}
-</div>
-
-<h2 className="font-[family-name:var(--font-display)] font-black text-2xl">
-Paylaşımı redaktə et
-</h2>
-</div>
-
-<button
-type="button"
-onClick={onClose}
-className="w-10 h-10 border text-lg"
-style={{
-borderColor: c.line,
-}}
->
-✕
-</button>
-</div>
-
-<form
-onSubmit={saveChanges}
-className="p-6"
->
-<TextField
-label="Başlıq"
-value={title}
-onChange={setTitle}
-required
-/>
-
-<TextAreaField
-label="Qısa açıqlama"
-value={excerpt}
-onChange={setExcerpt}
-rows={4}
-/>
-
-<TextAreaField
-label={
-type === 'video'
-? 'Mətn / açıqlama'
-: 'Xəbər mətni'
-}
-value={content}
-onChange={setContent}
-rows={10}
-required
-/>
-
-<div className="grid md:grid-cols-2 gap-5 mb-5">
-<CategorySelect
-value={category}
-onChange={setCategory}
-/>
-
-<TextField
-label="Mənbə"
-value={source}
-onChange={setSource}
-placeholder="Mənbə"
-/>
-</div>
-
-{type === 'news' && (
-<label className="flex items-center gap-3 mb-6 cursor-pointer">
-<input
-type="checkbox"
-checked={featured}
-onChange={(e) =>
-setFeatured(
-e.target.checked
-)
-}
-className="w-4 h-4 accent-[#B8842A]"
-/>
-
-<span className="text-sm font-medium">
-Bu xəbəri baş xəbər et
-</span>
-</label>
-)}
-
-<div className="mb-5">
-<FieldLabel>
-{type === 'video'
-? 'Yeni video'
-: 'Yeni şəkil'}
-</FieldLabel>
-
-<FileDropZone
-selected={newFile?.name}
-onSelect={(e) => {
-setNewFile(
-e.target.files?.[0] ||
-null
-);
-
-setMessage(null);
-}}
-accept={
-type === 'video'
-? 'video/*'
-: 'image/*'
-}
-icon={
-type === 'video'
-? '🎥'
-: '📷'
-}
-activeIcon={
-type === 'video'
-? '🎬'
-: '🖼️'
-}
-title={
-type === 'video'
-? 'Yeni video seç'
-: 'Yeni şəkil seç'
-}
-hint={
-newFile
-? 'Yeni fayl seçildi'
-: 'Mövcud faylı dəyişmək istəmirsənsə boş saxla'
-}
-minHeight={180}
-/>
-</div>
-
-{!newFile &&
-(type === 'video'
-? item.video_url
-: item.image_url) && (
-<div
-className="mb-6 border p-3"
-style={{
-borderColor: c.line,
-background: '#FAFAF8',
-}}
->
-<div
-className="text-xs mb-2"
-style={{
-color: c.muted,
-}}
->
-Mövcud fayl
-</div>
-
-{type === 'video' ? (
-<video
-src={item.video_url}
-controls
-className="w-full max-h-64"
-/>
-) : (
-<img
-src={item.image_url}
-alt={item.title}
-className="w-full max-h-64 object-contain"
-/>
-)}
-</div>
-)}
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="flex flex-col sm:flex-row gap-3 mt-6">
-<button
-type="submit"
-disabled={loading}
-className="flex-1 text-white px-6 py-3 font-semibold disabled:opacity-50"
-style={{
-background: c.ink,
-}}
->
-{loading
-? 'Yadda saxlanılır...'
-: '✓ Dəyişiklikləri yadda saxla'}
-</button>
-
-<button
-type="button"
-onClick={onClose}
-disabled={loading}
-className="px-6 py-3 border font-semibold"
-style={{
-borderColor: c.line,
-}}
->
-Ləğv et
-</button>
-</div>
-</form>
-</div>
-</div>
-);
-}
-
-/* =========================================================
-GALLERY MANAGER
-========================================================= */
-
-function GalleryManager() {
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [search, setSearch] = useState('');
-const [editing, setEditing] = useState(null);
-const [message, setMessage] = useState(null);
-
-useEffect(() => {
-loadGalleries();
-}, []);
-
-async function loadGalleries() {
-setLoading(true);
-
-try {
-const { data, error } =
-await supabase
-.from('photo_galleries')
-.select(
-'id,title,description,category,images,created_at'
-)
-.order('created_at', {
-ascending: false,
-});
-
-if (error) {
-throw error;
-}
-
-setItems(data || []);
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Qalereyalar yüklənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-const filtered = items.filter((item) =>
-`${item.title} ${item.description || ''}`
-.toLowerCase()
-.includes(search.toLowerCase())
-);
-
-async function deleteGallery(item) {
-const confirmed = window.confirm(
-`“${item.title}” qalereyasını silmək istəyirsən?`
-);
-
-if (!confirmed) return;
-
-try {
-const paths = [];
-
-for (const imageUrl of item.images || []) {
-const path =
-getStoragePathFromPublicUrl(
-imageUrl,
-GALLERY_BUCKET
-);
-
-if (path) {
-paths.push(path);
-}
-}
-
-const { error } =
-await supabase
-.from('photo_galleries')
-.delete()
-.eq('id', item.id);
-
-if (error) {
-throw error;
-}
-
-if (paths.length > 0) {
-await supabase.storage
-.from(GALLERY_BUCKET)
-.remove(paths);
-}
-
-setItems((current) =>
-current.filter(
-(gallery) =>
-gallery.id !== item.id
-)
-);
-
-setMessage({
-status: 'success',
-text: 'Qalereya silindi.',
-});
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Qalereya silinmədi.',
-});
-}
-}
-
-return (
-<div>
-<div
-className="border p-4 mb-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<input
-value={search}
-onChange={(e) =>
-setSearch(e.target.value)
-}
-placeholder="Qalereyalarda axtar..."
-className={fieldClass}
-style={{
-borderColor: c.line,
-}}
-/>
-</div>
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-{loading ? (
-<LoadingBox text="Qalereyalar yüklənir..." />
-) : filtered.length === 0 ? (
-<EmptyState text="Qalereya tapılmadı." />
-) : (
-<div className="space-y-4 mt-5">
-{filtered.map((item) => (
-<div
-key={item.id}
-className="border p-4 md:p-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div className="flex flex-col lg:flex-row gap-5">
-<div className="grid grid-cols-4 gap-2 lg:w-72 shrink-0">
-{(item.images || [])
-.slice(0, 4)
-.map((image, index) => (
-<img
-key={`${image}-${index}`}
-src={image}
-alt=""
-className="w-full aspect-square object-cover"
-/>
-))}
-</div>
-
-<div className="flex-1 min-w-0">
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mb-1"
-style={{
-color: c.gold,
-}}
->
-📸 Foto qalereya
-</div>
-
-<h3 className="font-[family-name:var(--font-display)] font-bold text-xl">
-{item.title}
-</h3>
-
-<p
-className="text-sm mt-2"
-style={{
-color: c.muted,
-}}
->
-{item.description ||
-'Açıqlama yoxdur.'}
-</p>
-
-<div
-className="text-xs mt-3"
-style={{
-color: c.muted,
-}}
->
-{item.images?.length || 0}{' '}
-şəkil
-</div>
-</div>
-
-<div className="flex lg:flex-col gap-2 shrink-0">
-<button
-type="button"
-onClick={() =>
-setEditing(item)
-}
-className="px-4 py-2 border text-sm font-semibold"
-style={{
-borderColor: c.line,
-color: c.blue,
-}}
->
-✏️ Redaktə
-</button>
-
-<button
-type="button"
-onClick={() =>
-deleteGallery(item)
-}
-className="px-4 py-2 border text-sm font-semibold"
-style={{
-borderColor: '#E8C7C2',
-color: c.danger,
-}}
->
-🗑️ Sil
-</button>
-</div>
-</div>
-</div>
-))}
-</div>
-)}
-
-{editing && (
-<EditGalleryModal
-item={editing}
-onClose={() =>
-setEditing(null)
-}
-onSaved={(updated) => {
-setItems((current) =>
-current.map((item) =>
-item.id === updated.id
-? updated
-: item
-)
-);
-
-setEditing(null);
-
-setMessage({
-status: 'success',
-text: 'Qalereya yeniləndi.',
-});
-}}
-/>
-)}
-</div>
-);
-}
-
-/* =========================================================
-EDIT GALLERY MODAL
-========================================================= */
-
-function EditGalleryModal({
-item,
-onClose,
-onSaved,
-}) {
-const [title, setTitle] =
-useState(item.title || '');
-
-const [description, setDescription] =
-useState(item.description || '');
-
-const [category, setCategory] =
-useState(
-item.category ||
-CATEGORIES?.[0]?.slug ||
-''
-);
-
-const [existingImages, setExistingImages] =
-useState(item.images || []);
-
-const [newImages, setNewImages] =
-useState([]);
-
-const [loading, setLoading] =
-useState(false);
-
-const [message, setMessage] =
-useState(null);
-
-function removeExisting(index) {
-setExistingImages((current) =>
-current.filter(
-(_, i) => i !== index
-)
-);
-}
-
-function selectNewImages(e) {
-setNewImages(
-Array.from(
-e.target.files || []
-)
-);
-}
-
-async function saveGallery(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Qalereyanın başlığı boş ola bilməz.'
-);
-}
-
-if (
-existingImages.length === 0 &&
-newImages.length === 0
-) {
-throw new Error(
-'Ən azı bir şəkil saxlanmalıdır.'
-);
-}
-
-const finalImages = [
-...existingImages,
-];
-
-const newlyUploadedPaths = [];
-
-for (const image of newImages) {
-const extension =
-image.name
-.split('.')
-.pop()
-?.toLowerCase() ||
-'jpg';
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-const { error } =
-await supabase.storage
-.from(GALLERY_BUCKET)
-.upload(
-fileName,
-image,
-{
-cacheControl: '3600',
-upsert: false,
-contentType:
-image.type ||
-undefined,
-}
-);
-
-if (error) {
-throw error;
-}
-
-const { data } =
-supabase.storage
-.from(GALLERY_BUCKET)
-.getPublicUrl(
-fileName
-);
-
-if (data?.publicUrl) {
-finalImages.push(
-data.publicUrl
-);
-
-newlyUploadedPaths.push(
-fileName
-);
-}
-}
-
-const oldImages =
-item.images || [];
-
-const removedImages =
-oldImages.filter(
-(oldImage) =>
-!existingImages.includes(
-oldImage
-)
-);
-
-const { data, error } =
-await supabase
-.from('photo_galleries')
-.update({
-title: title.trim(),
-description:
-description.trim(),
-category,
-images: finalImages,
-})
-.eq('id', item.id)
-.select()
-.single();
-
-if (error) {
-if (
-newlyUploadedPaths.length
-) {
-await supabase.storage
-.from(GALLERY_BUCKET)
-.remove(
-newlyUploadedPaths
-);
-}
-
-throw error;
-}
-
-const removedPaths =
-removedImages
-.map((url) =>
-getStoragePathFromPublicUrl(
-url,
-GALLERY_BUCKET
-)
-)
-.filter(Boolean);
-
-if (removedPaths.length) {
-await supabase.storage
-.from(GALLERY_BUCKET)
-.remove(
-removedPaths
-);
-}
-
-onSaved(data);
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Qalereya yenilənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-<div
-className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-style={{
-background: c.surface,
-}}
->
-<div
-className="sticky top-0 z-10 px-6 py-5 border-b flex items-center justify-between"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div>
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-[0.2em]"
-style={{ color: c.gold }}
->
-Qalereya redaktəsi
-</div>
-
-<h2 className="font-[family-name:var(--font-display)] font-black text-2xl">
-Qalereyanı redaktə et
-</h2>
-</div>
-
-<button
-type="button"
-onClick={onClose}
-className="w-10 h-10 border"
-style={{
-borderColor: c.line,
-}}
->
-✕
-</button>
-</div>
-
-<form
-onSubmit={saveGallery}
-className="p-6"
->
-<TextField
-label="Qalereya başlığı"
-value={title}
-onChange={setTitle}
-required
-/>
-
-<TextAreaField
-label="Açıqlama"
-value={description}
-onChange={setDescription}
-rows={5}
-/>
-
-<div className="mb-6">
-<CategorySelect
-value={category}
-onChange={setCategory}
-/>
-</div>
-
-<FieldLabel>
-Mövcud şəkillər
-</FieldLabel>
-
-{existingImages.length > 0 ? (
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-{existingImages.map(
-(image, index) => (
-<div
-key={`${image}-${index}`}
-className="relative aspect-square border overflow-hidden"
-style={{
-borderColor:
-c.line,
-}}
->
-<img
-src={image}
-alt=""
-className="w-full h-full object-cover"
-/>
-
-<button
-type="button"
-onClick={() =>
-removeExisting(
-index
-)
-}
-className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white"
->
-✕
-</button>
-</div>
-)
-)}
-</div>
-) : (
-<div
-className="border p-5 mb-6 text-sm"
-style={{
-borderColor: c.line,
-color: c.muted,
-}}
->
-Mövcud şəkil qalmayıb.
-</div>
-)}
-
-<div className="mb-6">
-<FieldLabel>
-Yeni şəkillər əlavə et
-</FieldLabel>
-
-<FileDropZone
-selected={
-newImages.length
-? `${newImages.length} yeni şəkil seçildi`
-: null
-}
-onSelect={selectNewImages}
-accept="image/*"
-multiple
-icon="📸"
-activeIcon="🖼️"
-title="Yeni şəkillər seç"
-hint="İstəsən mövcud şəkillərə əlavə edə bilərsən"
-minHeight={180}
-/>
-</div>
-
-{newImages.length > 0 && (
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-{newImages.map(
-(image, index) => (
-<div
-key={`${image.name}-${index}`}
-className="aspect-square overflow-hidden border"
-style={{
-borderColor:
-c.line,
-}}
->
-<img
-src={URL.createObjectURL(
-image
-)}
-alt=""
-className="w-full h-full object-cover"
-/>
-</div>
-)
-)}
-</div>
-)}
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="flex flex-col sm:flex-row gap-3 mt-6">
-<button
-type="submit"
-disabled={loading}
-className="flex-1 text-white px-6 py-3 font-semibold disabled:opacity-50"
-style={{
-background: c.ink,
-}}
->
-{loading
-? 'Yadda saxlanılır...'
-: '✓ Dəyişiklikləri yadda saxla'}
-</button>
-
-<button
-type="button"
-onClick={onClose}
-disabled={loading}
-className="px-6 py-3 border font-semibold"
-style={{
-borderColor: c.line,
-}}
->
-Ləğv et
-</button>
-</div>
-</form>
-</div>
-</div>
-);
-}
-
-/* =========================================================
-ADVERTISEMENT MANAGER
-========================================================= */
-
-function AdvertisementManager() {
-const [items, setItems] =
-useState([]);
-
-const [loading, setLoading] =
-useState(true);
-
-const [search, setSearch] =
-useState('');
-
-const [editing, setEditing] =
-useState(null);
-
-const [message, setMessage] =
-useState(null);
-
-useEffect(() => {
-loadAds();
-}, []);
-
-async function loadAds() {
-setLoading(true);
-
-try {
-const { data, error } =
-await supabase
-.from('advertisements')
-.select(
-'id,title,image_url,link_url,position,start_date,end_date,is_active,created_at'
-)
-.order('created_at', {
-ascending: false,
-});
-
-if (error) {
-throw error;
-}
-
-setItems(data || []);
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Reklamlar yüklənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-const filtered =
-items.filter((item) =>
-`${item.title} ${item.link_url || ''}`
-.toLowerCase()
-.includes(
-search.toLowerCase()
-)
-);
-
-async function deleteAd(item) {
-const confirmed =
-window.confirm(
-`“${item.title}” reklamını silmək istəyirsən?`
-);
-
-if (!confirmed) return;
-
-try {
-const { error } =
-await supabase
-.from('advertisements')
-.delete()
-.eq('id', item.id);
-
-if (error) {
-throw error;
-}
-
-if (item.image_url) {
-const path =
-getStoragePathFromPublicUrl(
-item.image_url,
-AD_BUCKET
-);
-
-if (path) {
-await supabase.storage
-.from(AD_BUCKET)
-.remove([path]);
-}
-}
-
-setItems((current) =>
-current.filter(
-(ad) =>
-ad.id !== item.id
-)
-);
-
-setMessage({
-status: 'success',
-text: 'Reklam silindi.',
-});
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Reklam silinmədi.',
-});
-}
-}
-
-return (
-<div>
-<div
-className="border p-4 mb-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<input
-value={search}
-onChange={(e) =>
-setSearch(e.target.value)
-}
-placeholder="Reklamlarda axtar..."
-className={fieldClass}
-style={{
-borderColor: c.line,
-}}
-/>
-</div>
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-{loading ? (
-<LoadingBox text="Reklamlar yüklənir..." />
-) : filtered.length === 0 ? (
-<EmptyState text="Reklam tapılmadı." />
-) : (
-<div className="space-y-3 mt-5">
-{filtered.map((item) => (
-<div
-key={item.id}
-className="border p-4 md:p-5"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div className="flex flex-col md:flex-row gap-4 md:items-center">
-<div className="w-full md:w-40 h-24 shrink-0 bg-[#F0EFEA] overflow-hidden">
-{item.image_url ? (
-<img
-src={item.image_url}
-alt={item.title}
-className="w-full h-full object-cover"
-/>
-) : (
-<div className="w-full h-full flex items-center justify-center text-3xl">
-📢
-</div>
-)}
-</div>
-
-<div className="flex-1 min-w-0">
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider"
-style={{
-color: c.gold,
-}}
->
-📢 Reklam
-</div>
-
-<h3 className="font-[family-name:var(--font-display)] font-bold text-lg truncate">
-{item.title}
-</h3>
-
-<div
-className="text-xs mt-1 truncate"
-style={{
-color: c.muted,
-}}
->
-{item.link_url ||
-'Link yoxdur'}
-</div>
-
-<div
-className="text-xs mt-2"
-style={{
-color: item.is_active
-? c.success
-: c.danger,
-}}
->
-{item.is_active
-? '● Aktiv'
-: '● Deaktiv'}
-</div>
-</div>
-
-<div className="flex md:flex-col gap-2">
-<button
-type="button"
-onClick={() =>
-setEditing(item)
-}
-className="px-4 py-2 border text-sm font-semibold"
-style={{
-borderColor:
-c.line,
-color: c.blue,
-}}
->
-✏️ Redaktə
-</button>
-
-<button
-type="button"
-onClick={() =>
-deleteAd(item)
-}
-className="px-4 py-2 border text-sm font-semibold"
-style={{
-borderColor:
-'#E8C7C2',
-color: c.danger,
-}}
->
-🗑️ Sil
-</button>
-</div>
-</div>
-</div>
-))}
-</div>
-)}
-
-{editing && (
-<EditAdvertisementModal
-item={editing}
-onClose={() =>
-setEditing(null)
-}
-onSaved={(updated) => {
-setItems((current) =>
-current.map((item) =>
-item.id === updated.id
-? updated
-: item
-)
-);
-
-setEditing(null);
-
-setMessage({
-status: 'success',
-text: 'Reklam yeniləndi.',
-});
-}}
-/>
-)}
-</div>
-);
-}
-
-/* =========================================================
-EDIT ADVERTISEMENT
-========================================================= */
-
-function EditAdvertisementModal({
-item,
-onClose,
-onSaved,
-}) {
-const [title, setTitle] =
-useState(item.title || '');
-
-const [linkUrl, setLinkUrl] =
-useState(item.link_url || '');
-
-const [position, setPosition] =
-useState(
-item.position || 'homepage'
-);
-
-const [startDate, setStartDate] =
-useState(
-formatDateTimeLocal(
-item.start_date
-)
-);
-
-const [endDate, setEndDate] =
-useState(
-formatDateTimeLocal(
-item.end_date
-)
-);
-
-const [active, setActive] =
-useState(
-item.is_active !== false
-);
-
-const [image, setImage] =
-useState(null);
-
-const [loading, setLoading] =
-useState(false);
-
-const [message, setMessage] =
-useState(null);
-
-async function saveAd(e) {
-e.preventDefault();
-
-setLoading(true);
-setMessage(null);
-
-try {
-if (!title.trim()) {
-throw new Error(
-'Reklam adı boş ola bilməz.'
-);
-}
-
-let imageUrl =
-item.image_url || '';
-
-let oldImagePath = null;
-
-if (image) {
-const extension =
-image.name
-.split('.')
-.pop()
-?.toLowerCase() ||
-'jpg';
-
-const fileName =
-`${crypto.randomUUID()}.${extension}`;
-
-const { error } =
-await supabase.storage
-.from(AD_BUCKET)
-.upload(
-fileName,
-image,
-{
-cacheControl: '3600',
-upsert: false,
-contentType:
-image.type ||
-undefined,
-}
-);
-
-if (error) {
-throw error;
-}
-
-const { data } =
-supabase.storage
-.from(AD_BUCKET)
-.getPublicUrl(
-fileName
-);
-
-imageUrl =
-data?.publicUrl || '';
-
-if (item.image_url) {
-oldImagePath =
-getStoragePathFromPublicUrl(
-item.image_url,
-AD_BUCKET
-);
-}
-}
-
-const { data, error } =
-await supabase
-.from('advertisements')
-.update({
-title: title.trim(),
-image_url: imageUrl,
-link_url: linkUrl.trim(),
-position,
-start_date:
-startDate || null,
-end_date:
-endDate || null,
-is_active: active,
-})
-.eq('id', item.id)
-.select()
-.single();
-
-if (error) {
-throw error;
-}
-
-if (oldImagePath) {
-await supabase.storage
-.from(AD_BUCKET)
-.remove([
-oldImagePath,
-]);
-}
-
-onSaved(data);
-} catch (error) {
-console.error(error);
-
-setMessage({
-status: 'error',
-text:
-error?.message ||
-'Reklam yenilənmədi.',
-});
-} finally {
-setLoading(false);
-}
-}
-
-return (
-<div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-<div
-className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-style={{
-background: c.surface,
-}}
->
-<div
-className="sticky top-0 z-10 px-6 py-5 border-b flex items-center justify-between"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div>
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-[0.2em]"
-style={{ color: c.gold }}
->
-Reklam redaktəsi
-</div>
-
-<h2 className="font-[family-name:var(--font-display)] font-black text-2xl">
-Reklamı redaktə et
-</h2>
-</div>
-
-<button
-type="button"
-onClick={onClose}
-className="w-10 h-10 border"
-style={{
-borderColor: c.line,
-}}
->
-✕
-</button>
-</div>
-
-<form
-onSubmit={saveAd}
-className="p-6"
->
-<TextField
-label="Reklam adı"
-value={title}
-onChange={setTitle}
-required
-/>
-
-<TextField
-label="Keçid linki"
-value={linkUrl}
-onChange={setLinkUrl}
-placeholder="https://..."
-/>
-
-<div className="grid md:grid-cols-3 gap-5 mb-6">
-<SelectField
-label="Mövqe"
-value={position}
-onChange={setPosition}
-options={
-<>
-<option value="homepage">
-Əsas səhifə
-</option>
-
-<option value="both">
-Əsas səhifə + digər
-</option>
-</>
-}
-/>
-
-<div>
-<FieldLabel>
-Başlama tarixi
-</FieldLabel>
-
-<input
-type="datetime-local"
-value={startDate}
-onChange={(e) =>
-setStartDate(
-e.target.value
-)
-}
-className={fieldClass}
-style={{
-borderColor: c.line,
-}}
-/>
-</div>
-
-<div>
-<FieldLabel>
-Bitmə tarixi
-</FieldLabel>
-
-<input
-type="datetime-local"
-value={endDate}
-onChange={(e) =>
-setEndDate(
-e.target.value
-)
-}
-className={fieldClass}
-style={{
-borderColor: c.line,
-}}
-/>
-</div>
-</div>
-
-<label className="flex items-center gap-3 mb-6 cursor-pointer">
-<input
-type="checkbox"
-checked={active}
-onChange={(e) =>
-setActive(
-e.target.checked
-)
-}
-className="w-4 h-4 accent-[#B8842A]"
-/>
-
-<span className="text-sm font-medium">
-Reklam aktiv olsun
-</span>
-</label>
-
-<div className="mb-5">
-<FieldLabel>
-Reklam şəklini dəyiş
-</FieldLabel>
-
-<FileDropZone
-selected={image?.name}
-onSelect={(e) =>
-setImage(
-e.target.files?.[0] ||
-null
-)
-}
-accept="image/*"
-icon="📢"
-activeIcon="🖼️"
-title="Yeni reklam şəkli seç"
-hint="Dəyişmək istəmirsənsə boş saxla"
-minHeight={180}
-/>
-</div>
-
-{!image &&
-item.image_url && (
-<div className="mb-6">
-<img
-src={item.image_url}
-alt={item.title}
-className="w-full max-h-64 object-contain border"
-style={{
-borderColor: c.line,
-}}
-/>
-</div>
-)}
-
-<Banner
-status={message?.status}
-text={message?.text}
-/>
-
-<div className="flex flex-col sm:flex-row gap-3 mt-6">
-<button
-type="submit"
-disabled={loading}
-className="flex-1 text-white px-6 py-3 font-semibold disabled:opacity-50"
-style={{
-background: c.ink,
-}}
->
-{loading
-? 'Yadda saxlanılır...'
-: '✓ Dəyişiklikləri yadda saxla'}
-</button>
-
-<button
-type="button"
-onClick={onClose}
-disabled={loading}
-className="px-6 py-3 border font-semibold"
-style={{
-borderColor: c.line,
-}}
->
-Ləğv et
-</button>
-</div>
-</form>
-</div>
-</div>
-);
-}
-
-/* =========================================================
-LOADING
-========================================================= */
-
-function LoadingBox({ text }) {
-return (
-<div
-className="border p-10 flex items-center justify-center gap-3"
-style={{
-background: c.surface,
-borderColor: c.line,
-color: c.muted,
-}}
->
-<span
-className="w-4 h-4 border-2 border-black/10 border-t-black/70 rounded-full animate-spin"
-/>
-
-<span className="text-sm">
-{text}
-</span>
-</div>
-);
-}
-
-/* =========================================================
-STATİSTİKA
-========================================================= */
-
-function Statistics() {
-const [articles, setArticles] =
-useState([]);
-
-const [galleries, setGalleries] =
-useState([]);
-
-const [loading, setLoading] =
-useState(true);
-
-useEffect(() => {
-loadStatistics();
-}, []);
-
-async function loadStatistics() {
-setLoading(true);
-
-try {
-const {
-data: articleData,
-} = await supabase
-.from('articles')
-.select(
-'id,title,views,video_url,created_at'
-)
-.order(
-'created_at',
-{
-ascending: false,
-}
-);
-
-const {
-data: galleryData,
-} = await supabase
-.from('photo_galleries')
-.select(
-'id,title,created_at'
-)
-.order(
-'created_at',
-{
-ascending: false,
-}
-);
-
-setArticles(
-articleData || []
-);
-
-setGalleries(
-galleryData || []
-);
-} catch (error) {
-console.error(error);
-} finally {
-setLoading(false);
-}
-}
-
-const totalViews =
-articles.reduce(
-(sum, item) =>
-sum + Number(item.views || 0),
-0
-);
-
-const videos =
-articles.filter(
-(item) =>
-item.video_url
-);
-
-const news =
-articles.filter(
-(item) =>
-!item.video_url
-);
-
-return (
-<div>
-<PageHeading
-eyebrow="Statistika deski · STA"
-title="Sayt statistikası"
-description="Panorama portalının ümumi göstəriciləri."
-/>
-
-<div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-<StatCard
-title="Xəbərlər"
-value={news.length}
-description="Adi xəbərlər"
-loading={loading}
-/>
-
-<StatCard
-title="Videolar"
-value={videos.length}
-description="Video xəbərlər"
-loading={loading}
-/>
-
-<StatCard
-title="Fotolar"
-value={galleries.length}
-description="Foto qalereyalar"
-loading={loading}
-/>
-
-<StatCard
-title="Baxışlar"
-value={totalViews}
-description="Ümumi baxış"
-loading={loading}
-accent
-/>
-</div>
-
-<div
-className="border"
-style={{
-background: c.surface,
-borderColor: c.line,
-}}
->
-<div
-className="px-6 py-4 border-b"
-style={{
-borderColor: c.line,
-}}
->
-<h2 className="font-[family-name:var(--font-display)] font-bold">
-Son paylaşımlar
-</h2>
-</div>
-
-{articles.length === 0 ? (
-<EmptyState text="Hələ paylaşım yoxdur." />
-) : (
-articles
-.slice(0, 10)
-.map((article) => (
-<div
-key={article.id}
-className="px-6 py-4 border-b last:border-b-0 flex items-center justify-between gap-4"
-style={{
-borderColor: c.line,
-}}
->
-<div className="min-w-0">
-<div className="text-sm font-semibold truncate">
-{article.title}
-</div>
-
-<div
-className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mt-1"
-style={{
-color: c.muted,
-}}
->
-{article.video_url
-? '🎥 Video'
-: '📰 Xəbər'}
-</div>
-</div>
-
-<div
-className="font-[family-name:var(--font-mono)] text-xs shrink-0"
-style={{
-color: c.muted,
-}}
->
-{article.views || 0}{' '}
-baxış
-</div>
-</div>
-))
-)}
-</div>
-</div>
-);
-}
-
-/* =========================================================
-HELPERS
-========================================================= */
-
-/*
-Supabase public URL-dən Storage daxilindəki
-fayl yolunu çıxarır.
-
-Məsələn:
-https://xxxx.supabase.co/storage/v1/object/public/
-xeber-sekiller/abc.jpg
-
-nəticə:
-abc.jpg
-*/
-
-function getStoragePathFromPublicUrl(
-publicUrl,
-bucket
-) {
-if (!publicUrl) return null;
-
-try {
-const marker =
-`/storage/v1/object/public/${bucket}/`;
-
-const index =
-publicUrl.indexOf(marker);
-
-if (index === -1) {
-return null;
-}
-
-return decodeURIComponent(
-publicUrl.slice(
-index + marker.length
-)
-);
-} catch {
-return null;
-}
-}
-
-function formatDateTimeLocal(
-value
-) {
-if (!value) return '';
-
-try {
-const date =
-new Date(value);
-
-if (Number.isNaN(date.getTime())) {
-return '';
-}
-
-const pad = (number) =>
-String(number).padStart(
-2,
-'0'
-);
-
-return `${date.getFullYear()}-${pad(
-date.getMonth() + 1
-)}-${pad(
-date.getDate()
-)}T${pad(
-date.getHours()
-)}:${pad(
-date.getMinutes()
-)}`;
-} catch {
-return '';
-}
-}
-
-/* =========================================================
-SLUG
-========================================================= */
-
-function slugify(text) {
-const map = {
-ə: 'e',
-Ə: 'e',
-ı: 'i',
-İ: 'i',
-ö: 'o',
-Ö: 'o',
-ü: 'u',
-Ü: 'u',
-ş: 's',
-Ş: 's',
-ç: 'c',
-Ç: 'c',
-ğ: 'g',
-Ğ: 'g',
-};
-
-return text
-.split('')
-.map(
-(char) =>
-map[char] || char
-)
-.join('')
-.toLowerCase()
-.replace(
-/[^a-z0-9]+/g,
-'-'
-)
-.replace(
-/^-+|-+$/g,
-'');
+  const [title, setTitle] = useState('');
+  const [excerpt, setExcerpt] = useState('');
+  const [category, setCategory] = useState(
+    CATEGORIES?.[0]?.slug || ''
+  );
+  const [source, setSource] = useState('');
+
+  const [video, setVideo] = useState(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  /* =========================================================
+     VİDEODAN AVTOMATİK QAPAQ ŞƏKLİ HAZIRLA
+  ========================================================= */
+
+  async function generateVideoThumbnail(videoFile) {
+    return new Promise((resolve, reject) => {
+      const videoElement = document.createElement('video');
+
+      const objectUrl =
+        URL.createObjectURL(videoFile);
+
+      videoElement.src = objectUrl;
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      videoElement.preload = 'metadata';
+
+      videoElement.onloadedmetadata = () => {
+        /*
+          Videonun ilk saniyəsinə keçirik.
+          0 saniyədə bəzi videolarda kadr hazır olmaya bilər.
+        */
+        const targetTime =
+          videoElement.duration > 0.5
+            ? 0.5
+            : 0;
+
+        try {
+          videoElement.currentTime = targetTime;
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      };
+
+      videoElement.onseeked = () => {
+        try {
+          const canvas =
+            document.createElement('canvas');
+
+          const width =
+            videoElement.videoWidth || 1280;
+
+          const height =
+            videoElement.videoHeight || 720;
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx =
+            canvas.getContext('2d');
+
+          if (!ctx) {
+            cleanup();
+
+            reject(
+              new Error(
+                'Video qapağı hazırlamaq mümkün olmadı.'
+              )
+            );
+
+            return;
+          }
+
+          ctx.drawImage(
+            videoElement,
+            0,
+            0,
+            width,
+            height
+          );
+
+          canvas.toBlob(
+            (blob) => {
+              cleanup();
+
+              if (!blob) {
+                reject(
+                  new Error(
+                    'Video qapaq şəkli yaradıla bilmədi.'
+                  )
+                );
+
+                return;
+              }
+
+              resolve(blob);
+            },
+            'image/jpeg',
+            0.88
+          );
+        } catch (error) {
+          cleanup();
+          reject(error);
+        }
+      };
+
+      videoElement.onerror = () => {
+        cleanup();
+
+        reject(
+          new Error(
+            'Videodan qapaq şəkli çıxarmaq mümkün olmadı.'
+          )
+        );
+      };
+
+      function cleanup() {
+        URL.revokeObjectURL(objectUrl);
+      }
+    });
+  }
+
+  /* =========================================================
+     VİDEO SEÇİLƏNDƏ
+  ========================================================= */
+
+  async function handleVideoSelect(e) {
+    const selected =
+      e.target.files?.[0] || null;
+
+    setVideo(null);
+    setThumbnailPreview('');
+    setMessage(null);
+
+    if (!selected) {
+      return;
+    }
+
+    /*
+      Maksimum 100 MB
+    */
+
+    const maxSize =
+      100 * 1024 * 1024;
+
+    if (selected.size > maxSize) {
+      setMessage({
+        status: 'error',
+        text:
+          'Video çox böyükdür. Maksimum 100 MB video yükləyə bilərsən.',
+      });
+
+      e.target.value = '';
+      return;
+    }
+
+    /*
+      Video faylı olduğuna əmin oluruq
+    */
+
+    if (
+      !selected.type ||
+      !selected.type.startsWith('video/')
+    ) {
+      setMessage({
+        status: 'error',
+        text:
+          'Zəhmət olmasa düzgün video faylı seç.',
+      });
+
+      e.target.value = '';
+      return;
+    }
+
+    setVideo(selected);
+
+    /*
+      Avtomatik qapaq şəkli yarat
+    */
+
+    try {
+      const thumbnailBlob =
+        await generateVideoThumbnail(selected);
+
+      const previewUrl =
+        URL.createObjectURL(thumbnailBlob);
+
+      setThumbnailPreview(previewUrl);
+    } catch (error) {
+      console.error(
+        'THUMBNAIL ERROR:',
+        error
+      );
+
+      /*
+        Qapaq alınmasa belə video seçilmiş qalır.
+      */
+
+      setMessage({
+        status: 'error',
+        text:
+          'Video seçildi, amma avtomatik qapaq şəkli hazırlamaq mümkün olmadı. Başqa video yoxla.',
+      });
+    }
+  }
+
+  /* =========================================================
+     VİDEONU YAYIMLA
+  ========================================================= */
+
+  async function publishVideo(e) {
+    e.preventDefault();
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      if (!title.trim()) {
+        throw new Error(
+          'Video başlığı yazılmalıdır.'
+        );
+      }
+
+      if (!video) {
+        throw new Error(
+          'Video seçilməyib.'
+        );
+      }
+
+      /*
+        Maksimum 100 MB
+      */
+
+      const maxSize =
+        100 * 1024 * 1024;
+
+      if (video.size > maxSize) {
+        throw new Error(
+          'Video çox böyükdür. Maksimum 100 MB video yükləyə bilərsən.'
+        );
+      }
+
+      /* =====================================================
+         1. VİDEODAN QAPAQ ŞƏKLİ HAZIRLA
+      ===================================================== */
+
+      const thumbnailBlob =
+        await generateVideoThumbnail(video);
+
+      /* =====================================================
+         2. QAPAQ ŞƏKLİNİ STORAGE-A YÜKLƏ
+      ===================================================== */
+
+      const thumbnailFileName =
+        `${crypto.randomUUID()}.jpg`;
+
+      const {
+        error: thumbnailUploadError,
+      } = await supabase.storage
+        .from(NEWS_IMAGE_BUCKET)
+        .upload(
+          thumbnailFileName,
+          thumbnailBlob,
+          {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'image/jpeg',
+          }
+        );
+
+      if (thumbnailUploadError) {
+        throw new Error(
+          `Video qapaq şəkli yüklənmədi: ${thumbnailUploadError.message}`
+        );
+      }
+
+      /* =====================================================
+         3. QAPAQ ŞƏKLİNİN PUBLIC URL-İ
+      ===================================================== */
+
+      const {
+        data: thumbnailUrlData,
+      } =
+        supabase.storage
+          .from(NEWS_IMAGE_BUCKET)
+          .getPublicUrl(
+            thumbnailFileName
+          );
+
+      const thumbnailUrl =
+        thumbnailUrlData?.publicUrl || '';
+
+      if (!thumbnailUrl) {
+        throw new Error(
+          'Video qapaq şəkli yükləndi, amma şəkil linki alınmadı.'
+        );
+      }
+
+      /* =====================================================
+         4. VİDEONUN ÖZÜNÜ STORAGE-A YÜKLƏ
+      ===================================================== */
+
+      const extension =
+        video.name
+          .split('.')
+          .pop()
+          ?.toLowerCase() || 'mp4';
+
+      const videoFileName =
+        `${crypto.randomUUID()}.${extension}`;
+
+      const {
+        error: uploadError,
+      } = await supabase.storage
+        .from(VIDEO_BUCKET)
+        .upload(
+          videoFileName,
+          video,
+          {
+            cacheControl: '3600',
+            upsert: false,
+            contentType:
+              video.type || undefined,
+          }
+        );
+
+      if (uploadError) {
+        /*
+          Video yüklənməsə qapağı da silirik.
+        */
+
+        await supabase.storage
+          .from(NEWS_IMAGE_BUCKET)
+          .remove([
+            thumbnailFileName,
+          ]);
+
+        throw new Error(
+          `Video yüklənmədi: ${uploadError.message}`
+        );
+      }
+
+      /* =====================================================
+         5. VİDEONUN PUBLIC URL-İ
+      ===================================================== */
+
+      const {
+        data: publicUrlData,
+      } =
+        supabase.storage
+          .from(VIDEO_BUCKET)
+          .getPublicUrl(
+            videoFileName
+          );
+
+      const videoUrl =
+        publicUrlData?.publicUrl || '';
+
+      if (!videoUrl) {
+        await supabase.storage
+          .from(VIDEO_BUCKET)
+          .remove([
+            videoFileName,
+          ]);
+
+        await supabase.storage
+          .from(NEWS_IMAGE_BUCKET)
+          .remove([
+            thumbnailFileName,
+          ]);
+
+        throw new Error(
+          'Video yükləndi, amma public link alınmadı.'
+        );
+      }
+
+      /* =====================================================
+         6. SLUG
+      ===================================================== */
+
+      const slug =
+        slugify(title) +
+        '-' +
+        Date.now();
+
+      /* =====================================================
+         7. BAZAYA XƏBƏRİ ƏLAVƏ ET
+         
+         ƏSAS DƏYİŞİKLİK:
+         
+         image_url artıq boş deyil.
+         
+         Videodan çıxardığımız qapaq şəkli yazılır.
+      ===================================================== */
+
+      const {
+        error: insertError,
+      } = await supabase
+        .from('articles')
+        .insert({
+          title: title.trim(),
+
+          excerpt:
+            excerpt.trim(),
+
+          content:
+            excerpt.trim(),
+
+          category,
+
+          source:
+            source.trim(),
+
+          /*
+            AVTOMATİK QAPAQ ŞƏKLİ
+          */
+          image_url:
+            thumbnailUrl,
+
+          /*
+            VİDEONUN ÖZÜ
+          */
+          video_url:
+            videoUrl,
+
+          slug,
+
+          is_featured: false,
+
+          views: 0,
+        });
+
+      /* =====================================================
+         8. BAZAYA YAZILMADIQDA FAYLLARI SİL
+      ===================================================== */
+
+      if (insertError) {
+        await supabase.storage
+          .from(VIDEO_BUCKET)
+          .remove([
+            videoFileName,
+          ]);
+
+        await supabase.storage
+          .from(NEWS_IMAGE_BUCKET)
+          .remove([
+            thumbnailFileName,
+          ]);
+
+        throw new Error(
+          `Video xəbəri bazaya əlavə olunmadı: ${insertError.message}`
+        );
+      }
+
+      /* =====================================================
+         9. FORMU TƏMİZLƏ
+      ===================================================== */
+
+      setTitle('');
+      setExcerpt('');
+      setSource('');
+      setVideo(null);
+      setThumbnailPreview('');
+
+      setMessage({
+        status: 'success',
+        text:
+          'Video xəbər və avtomatik qapaq şəkli uğurla yayımlandı.',
+      });
+
+      /*
+        File input-u təmizləmək üçün
+        form reset kifayətdir.
+      */
+
+    } catch (error) {
+      console.error(
+        'VIDEO ERROR:',
+        error
+      );
+
+      setMessage({
+        status: 'error',
+        text:
+          error?.message ||
+          'Video yüklənmədi.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* =========================================================
+     EKRAN
+  ========================================================= */
+
+  return (
+    <FormShell
+      eyebrow="Video deski · VID"
+      title="Video paylaş"
+      description="Kompüterindən video seç. Sistem videonun ilk kadrından avtomatik qapaq şəkli yaradacaq."
+      onSubmit={publishVideo}
+    >
+
+      {/* =====================================================
+          BAŞLIQ
+      ===================================================== */}
+
+      <TextField
+        label="Video başlığı"
+        value={title}
+        onChange={setTitle}
+        placeholder="Video xəbərin başlığı..."
+        required
+      />
+
+      {/* =====================================================
+          AÇIQLAMA
+      ===================================================== */}
+
+      <TextAreaField
+        label="Açıqlama"
+        value={excerpt}
+        onChange={setExcerpt}
+        placeholder="Video haqqında qısa məlumat..."
+        rows={4}
+      />
+
+      {/* =====================================================
+          KATEQORİYA + MƏNBƏ
+      ===================================================== */}
+
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+
+        <CategorySelect
+          value={category}
+          onChange={setCategory}
+        />
+
+        <TextField
+          label="Mənbə"
+          value={source}
+          onChange={setSource}
+          placeholder="Mənbə"
+        />
+
+      </div>
+
+      {/* =====================================================
+          VİDEO SEÇ
+      ===================================================== */}
+
+      <div className="mb-6">
+
+        <FieldLabel required>
+          Video faylı
+        </FieldLabel>
+
+        <FileDropZone
+          selected={video?.name}
+          onSelect={handleVideoSelect}
+          accept="video/mp4,video/webm,video/quicktime,video/*"
+          icon="🎥"
+          activeIcon="🎬"
+          title="Video seç"
+          hint={
+            video
+              ? `${video.name} — ${(video.size / 1024 / 1024).toFixed(1)} MB`
+              : 'MP4, MOV, WebM — maksimum 100 MB'
+          }
+          minHeight={220}
+        />
+
+      </div>
+
+      {/* =====================================================
+          VİDEO MƏLUMATI
+      ===================================================== */}
+
+      {video && (
+        <div
+          className="mb-6 border p-4"
+          style={{
+            borderColor: c.line,
+            background: '#FAFAF8',
+          }}
+        >
+
+          <div className="font-semibold">
+            Seçilmiş video
+          </div>
+
+          <div
+            className="text-xs mt-1"
+            style={{
+              color: c.muted,
+            }}
+          >
+            {video.name}
+          </div>
+
+          <div
+            className="text-xs mt-1"
+            style={{
+              color: c.muted,
+            }}
+          >
+            Ölçü:{' '}
+            {(video.size / 1024 / 1024).toFixed(
+              2
+            )}{' '}
+            MB
+          </div>
+
+        </div>
+      )}
+
+      {/* =====================================================
+          AVTOMATİK QAPAQ ŞƏKLİ
+      ===================================================== */}
+
+      {thumbnailPreview && (
+        <div className="mb-6">
+
+          <div
+            className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.15em] mb-3"
+            style={{
+              color: c.muted,
+            }}
+          >
+            Avtomatik video qapağı
+          </div>
+
+          <div
+            className="relative max-w-xl aspect-video overflow-hidden border"
+            style={{
+              borderColor: c.line,
+              background: '#111',
+            }}
+          >
+
+            <img
+              src={thumbnailPreview}
+              alt="Video qapağı"
+              className="w-full h-full object-cover"
+            />
+
+            <div className="absolute bottom-3 left-3">
+
+              <span className="bg-black/75 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider">
+                ▶ Video qapağı
+              </span>
+
+            </div>
+
+          </div>
+
+          <p
+            className="text-xs mt-2"
+            style={{
+              color: c.muted,
+            }}
+          >
+            Bu şəkil videonun ilk kadrından
+            avtomatik hazırlanacaq və saytda
+            qapaq şəkli kimi görünəcək.
+          </p>
+
+        </div>
+      )}
+
+      {/* =====================================================
+          MESAJ
+      ===================================================== */}
+
+      <Banner
+        status={message?.status}
+        text={message?.text}
+      />
+
+      {/* =====================================================
+          GÖNDƏR
+      ===================================================== */}
+
+      <div className="mt-6">
+
+        <SubmitButton
+          loading={loading}
+          loadingText="Video və qapaq yüklənir..."
+        >
+          🎥 Videonu yayımla
+        </SubmitButton>
+
+      </div>
+
+    </FormShell>
+  );
 }
