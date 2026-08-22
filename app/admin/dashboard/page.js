@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fraunces, Inter, IBM_Plex_Mono } from 'next/font/google';
 import { supabase } from '@/lib/supabaseClient';
-import { CATEGORIES } from '@/lib/categories';
+import { CATEGORIES, slugify } from '@/lib/categories';
 
 /* =========================================================
-   TYPOGRAPHY
+   FONTS
 ========================================================= */
 
 const fraunces = Fraunces({
@@ -32,7 +32,7 @@ const plexMono = IBM_Plex_Mono({
 const FONT_VARS = `${fraunces.variable} ${inter.variable} ${plexMono.variable}`;
 
 /* =========================================================
-   DESIGN TOKENS
+   COLORS
 ========================================================= */
 
 const c = {
@@ -55,12 +55,42 @@ const c = {
 ========================================================= */
 
 const NAV_ITEMS = [
-  { key: 'dashboard', code: 'PAN', label: 'Ümumi görünüş', icon: '▦' },
-  { key: 'news', code: 'NWS', label: 'Xəbər paylaş', icon: '📰' },
-  { key: 'video', code: 'VID', label: 'Video paylaş', icon: '🎥' },
-  { key: 'gallery', code: 'GAL', label: 'Foto qalereya', icon: '📸' },
-  { key: 'ads', code: 'REK', label: 'Reklamlar', icon: '📢' },
-  { key: 'statistics', code: 'STA', label: 'Statistika', icon: '📊' },
+  {
+    key: 'dashboard',
+    code: 'PAN',
+    label: 'Ümumi görünüş',
+    icon: '▦',
+  },
+  {
+    key: 'news',
+    code: 'NWS',
+    label: 'Xəbər paylaş',
+    icon: '📰',
+  },
+  {
+    key: 'video',
+    code: 'VID',
+    label: 'Video paylaş',
+    icon: '🎥',
+  },
+  {
+    key: 'gallery',
+    code: 'GAL',
+    label: 'Foto qalereya',
+    icon: '📸',
+  },
+  {
+    key: 'ads',
+    code: 'REK',
+    label: 'Reklamlar',
+    icon: '📢',
+  },
+  {
+    key: 'statistics',
+    code: 'STA',
+    label: 'Statistika',
+    icon: '📊',
+  },
 ];
 
 /* =========================================================
@@ -80,17 +110,24 @@ export default function AdminDashboard() {
   }, []);
 
   async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-    if (!user) {
+      if (error || !user) {
+        router.replace('/admin');
+        return;
+      }
+
+      setUser(user);
+    } catch (error) {
+      console.error('AUTH ERROR:', error);
       router.replace('/admin');
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setUser(user);
-    setLoading(false);
   }
 
   async function logout() {
@@ -120,6 +157,7 @@ export default function AdminDashboard() {
             className="w-2 h-2 rounded-full animate-pulse"
             style={{ background: c.gold }}
           />
+
           <span
             className="text-xs tracking-[0.2em] uppercase font-[family-name:var(--font-mono)]"
             style={{ color: c.muted }}
@@ -134,17 +172,27 @@ export default function AdminDashboard() {
   return (
     <div
       className={`${FONT_VARS} min-h-screen font-[family-name:var(--font-body)]`}
-      style={{ background: c.paper, color: c.text }}
+      style={{
+        background: c.paper,
+        color: c.text,
+      }}
     >
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <header
         className="sticky top-0 z-30 border-b"
-        style={{ background: c.ink, borderColor: c.inkSoft }}
+        style={{
+          background: c.ink,
+          borderColor: c.inkSoft,
+        }}
       >
         <div className="max-w-[1600px] mx-auto px-5 md:px-8">
           <div className="h-16 flex items-center justify-between">
+
             <div className="flex items-center gap-4">
+
               <button
                 onClick={() => setNavOpen((v) => !v)}
                 className="md:hidden text-white/70 text-lg leading-none px-1"
@@ -162,10 +210,13 @@ export default function AdminDashboard() {
                   Redaksiya idarə paneli
                 </div>
               </div>
+
             </div>
 
             <div className="flex items-center gap-3 md:gap-5">
+
               <div className="hidden lg:flex items-center gap-2 pr-5 border-r border-white/10">
+
                 <span
                   className="w-1.5 h-1.5 rounded-full animate-pulse"
                   style={{ background: c.gold }}
@@ -174,9 +225,11 @@ export default function AdminDashboard() {
                 <span className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.2em] text-white/50">
                   Canlı sessiya
                 </span>
+
               </div>
 
               <div className="hidden md:block text-right">
+
                 <div className="text-xs text-white/70">
                   {user?.email}
                 </div>
@@ -184,6 +237,7 @@ export default function AdminDashboard() {
                 <div className="font-[family-name:var(--font-mono)] text-[9px] text-white/35 uppercase tracking-[0.15em] capitalize">
                   {today}
                 </div>
+
               </div>
 
               <button
@@ -192,7 +246,9 @@ export default function AdminDashboard() {
               >
                 Çıxış
               </button>
+
             </div>
+
           </div>
         </div>
 
@@ -209,7 +265,9 @@ export default function AdminDashboard() {
 
       <div className="max-w-[1600px] mx-auto flex">
 
-        {/* SIDEBAR */}
+        {/* ===================================================
+            SIDEBAR
+        =================================================== */}
 
         <aside
           className={`
@@ -224,6 +282,7 @@ export default function AdminDashboard() {
           }}
         >
           <div className="p-4">
+
             <div
               className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-[0.25em] px-3 mb-3"
               style={{ color: c.muted }}
@@ -232,6 +291,7 @@ export default function AdminDashboard() {
             </div>
 
             <nav className="space-y-1">
+
               {NAV_ITEMS.map((item) => (
                 <DeskNavItem
                   key={item.key}
@@ -243,6 +303,7 @@ export default function AdminDashboard() {
                   }}
                 />
               ))}
+
             </nav>
 
             <div
@@ -260,6 +321,7 @@ export default function AdminDashboard() {
               <span>🌐</span>
               Sayta bax
             </a>
+
           </div>
         </aside>
 
@@ -270,9 +332,12 @@ export default function AdminDashboard() {
           />
         )}
 
-        {/* CONTENT */}
+        {/* ===================================================
+            CONTENT
+        =================================================== */}
 
         <main className="flex-1 min-w-0 p-5 md:p-10">
+
           {active === 'dashboard' && (
             <DashboardHome setActive={setActive} />
           )}
@@ -286,7 +351,9 @@ export default function AdminDashboard() {
           {active === 'ads' && <AdvertisementForm />}
 
           {active === 'statistics' && <Statistics />}
+
         </main>
+
       </div>
     </div>
   );
@@ -312,6 +379,7 @@ function DeskNavItem({
         color: active ? '#fff' : c.text,
       }}
     >
+
       <span
         className="font-[family-name:var(--font-mono)] text-[9px] w-8 shrink-0 tracking-wider"
         style={{
@@ -328,6 +396,7 @@ function DeskNavItem({
       <span className="truncate">
         {label}
       </span>
+
     </button>
   );
 }
@@ -354,41 +423,78 @@ function DashboardHome({ setActive }) {
   async function loadStats() {
     setLoadingStats(true);
 
-    const { data: articles } = await supabase
-      .from('articles')
-      .select('id,title,video_url,views,created_at')
-      .order('created_at', { ascending: false });
+    try {
+      const { data: articles, error: articlesError } =
+        await supabase
+          .from('articles')
+          .select(
+            'id,title,video_url,views,created_at'
+          )
+          .order('created_at', {
+            ascending: false,
+          });
 
-    const { data: galleries } = await supabase
-      .from('photo_galleries')
-      .select('id');
+      if (articlesError) {
+        console.error(
+          'ARTICLES STATS ERROR:',
+          articlesError
+        );
+      }
 
-    const normalArticles = (articles || []).filter(
-      (a) => !a.video_url
-    );
+      const { data: galleries, error: galleryError } =
+        await supabase
+          .from('photo_galleries')
+          .select('id');
 
-    const videos = (articles || []).filter(
-      (a) => a.video_url
-    );
+      if (galleryError) {
+        console.error(
+          'GALLERY STATS ERROR:',
+          galleryError
+        );
+      }
 
-    const views = (articles || []).reduce(
-      (total, a) => total + Number(a.views || 0),
-      0
-    );
+      const allArticles = articles || [];
 
-    setStats({
-      articles: normalArticles.length,
-      videos: videos.length,
-      galleries: galleries?.length || 0,
-      views,
-    });
+      const normalArticles =
+        allArticles.filter(
+          (a) => !a.video_url
+        );
 
-    setRecent((articles || []).slice(0, 5));
-    setLoadingStats(false);
+      const videos =
+        allArticles.filter(
+          (a) => a.video_url
+        );
+
+      const views =
+        allArticles.reduce(
+          (total, a) =>
+            total + Number(a.views || 0),
+          0
+        );
+
+      setStats({
+        articles: normalArticles.length,
+        videos: videos.length,
+        galleries: galleries?.length || 0,
+        views,
+      });
+
+      setRecent(
+        allArticles.slice(0, 5)
+      );
+    } catch (error) {
+      console.error(
+        'DASHBOARD ERROR:',
+        error
+      );
+    } finally {
+      setLoadingStats(false);
+    }
   }
 
   return (
     <div>
+
       <PageHeading
         eyebrow="Panorama Xəbər"
         title="Admin panel"
@@ -396,6 +502,7 @@ function DashboardHome({ setActive }) {
       />
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+
         <ActionCard
           icon="📰"
           title="Yeni xəbər"
@@ -427,9 +534,11 @@ function DashboardHome({ setActive }) {
           button="Reklam əlavə et"
           onClick={() => setActive('ads')}
         />
+
       </div>
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-10">
+
         <StatCard
           title="Xəbərlər"
           value={stats.articles}
@@ -458,6 +567,7 @@ function DashboardHome({ setActive }) {
           loading={loadingStats}
           accent
         />
+
       </div>
 
       <div
@@ -467,21 +577,26 @@ function DashboardHome({ setActive }) {
           borderColor: c.line,
         }}
       >
+
         <div
           className="px-6 py-4 border-b flex items-center justify-between"
           style={{ borderColor: c.line }}
         >
+
           <h2 className="font-[family-name:var(--font-display)] font-bold text-lg">
             Son paylaşımlar
           </h2>
 
           <button
-            onClick={() => setActive('statistics')}
+            onClick={() =>
+              setActive('statistics')
+            }
             className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.15em]"
             style={{ color: c.blue }}
           >
             Hamısına bax →
           </button>
+
         </div>
 
         {recent.length === 0 ? (
@@ -493,7 +608,9 @@ function DashboardHome({ setActive }) {
               className="px-6 py-4 border-b last:border-b-0 flex items-center justify-between gap-4"
               style={{ borderColor: c.line }}
             >
+
               <div className="min-w-0">
+
                 <div className="text-sm font-semibold truncate">
                   {article.title}
                 </div>
@@ -506,6 +623,7 @@ function DashboardHome({ setActive }) {
                     ? '🎥 Video'
                     : '📰 Xəbər'}
                 </div>
+
               </div>
 
               <div
@@ -514,10 +632,13 @@ function DashboardHome({ setActive }) {
               >
                 {article.views || 0} baxış
               </div>
+
             </div>
           ))
         )}
+
       </div>
+
     </div>
   );
 }
@@ -533,6 +654,7 @@ function PageHeading({
 }) {
   return (
     <div className="mb-8">
+
       <div
         className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.25em] mb-2"
         style={{ color: c.gold }}
@@ -552,6 +674,7 @@ function PageHeading({
           {description}
         </p>
       )}
+
     </div>
   );
 }
@@ -571,6 +694,7 @@ function ActionCard({
         borderColor: c.line,
       }}
     >
+
       <div className="text-3xl mb-5">
         {icon}
       </div>
@@ -593,6 +717,7 @@ function ActionCard({
       >
         + {button}
       </button>
+
     </div>
   );
 }
@@ -612,6 +737,7 @@ function StatCard({
         borderColor: c.line,
       }}
     >
+
       {accent && (
         <div
           className="absolute top-0 left-0 right-0 h-[3px]"
@@ -638,6 +764,7 @@ function StatCard({
       >
         {description}
       </div>
+
     </div>
   );
 }
@@ -653,7 +780,10 @@ function EmptyState({ text }) {
   );
 }
 
-function Banner({ status, text }) {
+function Banner({
+  status,
+  text,
+}) {
   if (!text) return null;
 
   const styles = {
@@ -672,7 +802,9 @@ function Banner({ status, text }) {
     },
   };
 
-  const s = styles[status] || styles.error;
+  const s =
+    styles[status] ||
+    styles.error;
 
   return (
     <div
@@ -683,11 +815,15 @@ function Banner({ status, text }) {
         color: s.fg,
       }}
     >
+
       <span className="font-bold">
         {s.icon}
       </span>
 
-      <span>{text}</span>
+      <span>
+        {text}
+      </span>
+
     </div>
   );
 }
@@ -701,6 +837,7 @@ function FormShell({
 }) {
   return (
     <div>
+
       <PageHeading
         eyebrow={eyebrow}
         title={title}
@@ -717,6 +854,7 @@ function FormShell({
       >
         {children}
       </form>
+
     </div>
   );
 }
@@ -730,6 +868,7 @@ function FieldLabel({
       className="block font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.15em] mb-2"
       style={{ color: c.muted }}
     >
+
       {children}
 
       {required && (
@@ -737,6 +876,7 @@ function FieldLabel({
           {' '}*
         </span>
       )}
+
     </label>
   );
 }
@@ -754,6 +894,7 @@ function TextField({
 }) {
   return (
     <div className={`mb-5 ${className}`}>
+
       <FieldLabel required={required}>
         {label}
       </FieldLabel>
@@ -763,10 +904,15 @@ function TextField({
         value={value}
         required={required}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         className={fieldClass}
-        style={{ borderColor: c.line }}
+        style={{
+          borderColor: c.line,
+        }}
       />
+
     </div>
   );
 }
@@ -782,6 +928,7 @@ function TextAreaField({
 }) {
   return (
     <div className={`mb-5 ${className}`}>
+
       <FieldLabel required={required}>
         {label}
       </FieldLabel>
@@ -791,10 +938,15 @@ function TextAreaField({
         required={required}
         placeholder={placeholder}
         rows={rows}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         className={`${fieldClass} resize-y`}
-        style={{ borderColor: c.line }}
+        style={{
+          borderColor: c.line,
+        }}
       />
+
     </div>
   );
 }
@@ -808,18 +960,24 @@ function SelectField({
 }) {
   return (
     <div className={className}>
+
       <FieldLabel>
         {label}
       </FieldLabel>
 
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
         className={fieldClass}
-        style={{ borderColor: c.line }}
+        style={{
+          borderColor: c.line,
+        }}
       >
         {options}
       </select>
+
     </div>
   );
 }
@@ -834,13 +992,19 @@ function SubmitButton({
       type="submit"
       disabled={loading}
       className="mt-2 w-full md:w-auto text-white px-8 py-3 font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-      style={{ background: c.ink }}
+      style={{
+        background: c.ink,
+      }}
     >
+
       {loading && (
         <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
       )}
 
-      {loading ? loadingText : children}
+      {loading
+        ? loadingText
+        : children}
+
     </button>
   );
 }
@@ -861,13 +1025,23 @@ function FileDropZone({
       className="flex flex-col items-center justify-center border-2 border-dashed cursor-pointer transition-colors"
       style={{
         minHeight,
-        borderColor: selected ? c.gold : c.line,
-        background: selected ? c.goldSoft : '#FAFAF8',
+        borderColor:
+          selected
+            ? c.gold
+            : c.line,
+        background:
+          selected
+            ? c.goldSoft
+            : '#FAFAF8',
       }}
     >
+
       <div className="text-center px-4">
+
         <div className="text-4xl mb-3">
-          {selected ? activeIcon : icon}
+          {selected
+            ? activeIcon
+            : icon}
         </div>
 
         <div className="font-semibold text-sm truncate max-w-[280px]">
@@ -880,6 +1054,7 @@ function FileDropZone({
         >
           {hint}
         </div>
+
       </div>
 
       <input
@@ -889,6 +1064,7 @@ function FileDropZone({
         className="hidden"
         onChange={onSelect}
       />
+
     </label>
   );
 }
@@ -902,17 +1078,19 @@ function CategorySelect({
       label="Kateqoriya"
       value={value}
       onChange={onChange}
-      options={CATEGORIES.map((item) => (
-        <option
-          key={item.slug}
-          value={item.slug}
-        >
-          {item.name ||
-            item.title ||
-            item.label ||
-            item.slug}
-        </option>
-      ))}
+      options={CATEGORIES.map(
+        (item) => (
+          <option
+            key={item.slug}
+            value={item.slug}
+          >
+            {item.name ||
+              item.title ||
+              item.label ||
+              item.slug}
+          </option>
+        )
+      )}
     />
   );
 }
@@ -922,18 +1100,34 @@ function CategorySelect({
 ========================================================= */
 
 function NewsForm() {
-  const [title, setTitle] = useState('');
-  const [excerpt, setExcerpt] = useState('');
-  const [content, setContent] = useState('');
-  const [category, setCategory] = useState(
-    CATEGORIES?.[0]?.slug || ''
-  );
-  const [source, setSource] = useState('');
-  const [image, setImage] = useState(null);
-  const [featured, setFeatured] = useState(false);
+  const [title, setTitle] =
+    useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [excerpt, setExcerpt] =
+    useState('');
+
+  const [content, setContent] =
+    useState('');
+
+  const [category, setCategory] =
+    useState(
+      CATEGORIES?.[0]?.slug || ''
+    );
+
+  const [source, setSource] =
+    useState('');
+
+  const [image, setImage] =
+    useState(null);
+
+  const [featured, setFeatured] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState(null);
 
   async function publishNews(e) {
     e.preventDefault();
@@ -942,41 +1136,82 @@ function NewsForm() {
     setMessage(null);
 
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(
+          'Admin sessiyası tapılmadı. Yenidən daxil ol.'
+        );
+      }
+
       if (!title.trim()) {
-        throw new Error('Xəbər başlığı yazılmalıdır.');
+        throw new Error(
+          'Xəbər başlığı yazılmalıdır.'
+        );
       }
 
       if (!content.trim()) {
-        throw new Error('Xəbər mətni yazılmalıdır.');
+        throw new Error(
+          'Xəbər mətni yazılmalıdır.'
+        );
       }
 
       let imageUrl = '';
 
       if (image) {
         const extension =
-          image.name.split('.').pop() || 'jpg';
+          image.name
+            .split('.')
+            .pop() || 'jpg';
 
         const fileName =
           `${crypto.randomUUID()}.${extension}`;
 
-        const { error } = await supabase.storage
+        const {
+          error: uploadError,
+        } = await supabase.storage
           .from('news-images')
-          .upload(fileName, image);
+          .upload(
+            fileName,
+            image,
+            {
+              cacheControl: '3600',
+              upsert: false,
+              contentType:
+                image.type ||
+                'image/jpeg',
+            }
+          );
 
-        if (error) throw error;
+        if (uploadError) {
+          throw new Error(
+            `Şəkil yüklənmədi: ${uploadError.message}`
+          );
+        }
 
-        const { data } =
+        const {
+          data,
+        } =
           supabase.storage
             .from('news-images')
-            .getPublicUrl(fileName);
+            .getPublicUrl(
+              fileName
+            );
 
-        imageUrl = data.publicUrl;
+        imageUrl =
+          data?.publicUrl || '';
       }
 
       const slug =
-        slugify(title) + '-' + Date.now();
+        slugify(title) +
+        '-' +
+        Date.now();
 
-      const { error } = await supabase
+      const {
+        error,
+      } = await supabase
         .from('articles')
         .insert({
           title: title.trim(),
@@ -991,7 +1226,11 @@ function NewsForm() {
           views: 0,
         });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          `Xəbər bazaya əlavə olunmadı: ${error.message}`
+        );
+      }
 
       setTitle('');
       setExcerpt('');
@@ -1002,10 +1241,15 @@ function NewsForm() {
 
       setMessage({
         status: 'success',
-        text: 'Xəbər uğurla yayımlandı.',
+        text:
+          '📰 Xəbər uğurla yayımlandı.',
       });
+
     } catch (error) {
-      console.error(error);
+      console.error(
+        'NEWS ERROR:',
+        error
+      );
 
       setMessage({
         status: 'error',
@@ -1013,6 +1257,7 @@ function NewsForm() {
           error?.message ||
           'Xəta baş verdi.',
       });
+
     } finally {
       setLoading(false);
     }
@@ -1025,6 +1270,7 @@ function NewsForm() {
       description="Adi xəbəri saytda yayımla."
       onSubmit={publishNews}
     >
+
       <TextField
         label="Xəbər başlığı"
         value={title}
@@ -1051,6 +1297,7 @@ function NewsForm() {
       />
 
       <div className="grid md:grid-cols-2 gap-5 mb-5">
+
         <CategorySelect
           value={category}
           onChange={setCategory}
@@ -1062,9 +1309,11 @@ function NewsForm() {
           onChange={setSource}
           placeholder="Məsələn: APA"
         />
+
       </div>
 
       <div className="mb-6">
+
         <FieldLabel>
           Əsas şəkil
         </FieldLabel>
@@ -1073,7 +1322,8 @@ function NewsForm() {
           selected={image?.name}
           onSelect={(e) =>
             setImage(
-              e.target.files?.[0] || null
+              e.target.files?.[0] ||
+              null
             )
           }
           accept="image/*"
@@ -1086,14 +1336,18 @@ function NewsForm() {
               : 'Kompüterindən şəkil seç'
           }
         />
+
       </div>
 
       <label className="flex items-center gap-3 mb-2 cursor-pointer select-none">
+
         <input
           type="checkbox"
           checked={featured}
           onChange={(e) =>
-            setFeatured(e.target.checked)
+            setFeatured(
+              e.target.checked
+            )
           }
           className="w-4 h-4 accent-[#B8842A]"
         />
@@ -1101,6 +1355,7 @@ function NewsForm() {
         <span className="text-sm font-medium">
           Bu xəbəri baş xəbər et
         </span>
+
       </label>
 
       <Banner
@@ -1109,120 +1364,48 @@ function NewsForm() {
       />
 
       <div className="mt-6">
+
         <SubmitButton
           loading={loading}
           loadingText="Yüklənir..."
         >
           📰 Xəbəri yayımla
         </SubmitButton>
+
       </div>
+
     </FormShell>
   );
 }
 
 /* =========================================================
-   VİDEO PAYLAŞ
-   BURADA BU HİSSƏ DÜZƏLDİLİB
+   VİDEO
+   ƏSAS DÜZƏLİŞ BURADADIR
 ========================================================= */
 
 function VideoForm() {
-  const [title, setTitle] = useState('');
-  const [excerpt, setExcerpt] = useState('');
-  const [category, setCategory] = useState(
-    CATEGORIES?.[0]?.slug || ''
-  );
-  const [source, setSource] = useState('');
-  const [video, setVideo] = useState(null);
+  const [title, setTitle] =
+    useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [excerpt, setExcerpt] =
+    useState('');
 
-  /*
-    Supabase-də bucket adının fərqli olması ehtimalına görə
-    bir neçə mümkün adı yoxlayırıq.
-  */
-  const VIDEO_BUCKETS = [
-    'news-videos',
-    'xeber-videolari',
-    'xəbər-videoları',
-    'news_videos',
-    'videos',
-    'video',
-  ];
-
-  async function uploadVideo(file) {
-    const extension =
-      file.name.split('.').pop()?.toLowerCase() || 'mp4';
-
-    const fileName =
-      `${crypto.randomUUID()}.${extension}`;
-
-    let lastError = null;
-
-    for (const bucket of VIDEO_BUCKETS) {
-      try {
-        const { error } = await supabase.storage
-          .from(bucket)
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type || undefined,
-          });
-
-        if (!error) {
-          const { data } =
-            supabase.storage
-              .from(bucket)
-              .getPublicUrl(fileName);
-
-          if (!data?.publicUrl) {
-            throw new Error(
-              'Video yükləndi, amma public link alınmadı.'
-            );
-          }
-
-          return {
-            url: data.publicUrl,
-            bucket,
-          };
-        }
-
-        lastError = error;
-
-        /*
-          Bucket tapılmadısa növbəti ada keçirik.
-          Digər xəta isə dəqiq xəta kimi saxlanılır.
-        */
-        const msg =
-          String(error.message || '').toLowerCase();
-
-        if (
-          !msg.includes('bucket not found') &&
-          !msg.includes('not found') &&
-          !msg.includes('does not exist')
-        ) {
-          throw error;
-        }
-      } catch (error) {
-        lastError = error;
-
-        const msg =
-          String(error?.message || '').toLowerCase();
-
-        if (
-          !msg.includes('bucket not found') &&
-          !msg.includes('not found') &&
-          !msg.includes('does not exist')
-        ) {
-          throw error;
-        }
-      }
-    }
-
-    throw new Error(
-      `Video bucket-i tapılmadı. Supabase Storage bölməsində video bucket-in olmalıdır. Yoxlanılan adlar: ${VIDEO_BUCKETS.join(', ')}`
+  const [category, setCategory] =
+    useState(
+      CATEGORIES?.[0]?.slug || ''
     );
-  }
+
+  const [source, setSource] =
+    useState('');
+
+  const [video, setVideo] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState(null);
 
   async function publishVideo(e) {
     e.preventDefault();
@@ -1230,7 +1413,36 @@ function VideoForm() {
     setLoading(true);
     setMessage(null);
 
+    let uploadedFileName = null;
+
     try {
+
+      /* =====================================================
+         AUTH
+      ===================================================== */
+
+      const {
+        data: { user },
+        error: authError,
+      } =
+        await supabase.auth.getUser();
+
+      if (authError) {
+        throw new Error(
+          `Admin sessiyası yoxlanmadı: ${authError.message}`
+        );
+      }
+
+      if (!user) {
+        throw new Error(
+          'Admin hesabına giriş edilməyib. Yenidən daxil ol.'
+        );
+      }
+
+      /* =====================================================
+         FORM
+      ===================================================== */
+
       if (!title.trim()) {
         throw new Error(
           'Video başlığı yazılmalıdır.'
@@ -1243,10 +1455,10 @@ function VideoForm() {
         );
       }
 
-      /*
-        Fayl ölçüsünü yoxlayırıq.
-        100 MB-dan böyükdürsə istifadəçiyə xəbər veririk.
-      */
+      /* =====================================================
+         SIZE
+      ===================================================== */
+
       const maxSize =
         100 * 1024 * 1024;
 
@@ -1256,44 +1468,155 @@ function VideoForm() {
         );
       }
 
-      const uploaded =
-        await uploadVideo(video);
+      /* =====================================================
+         FILE NAME
+      ===================================================== */
+
+      const extension =
+        video.name
+          .split('.')
+          .pop()
+          ?.toLowerCase() ||
+        'mp4';
+
+      uploadedFileName =
+        `${crypto.randomUUID()}.${extension}`;
+
+      console.log(
+        'VIDEO UPLOAD:',
+        uploadedFileName
+      );
+
+      /* =====================================================
+         SUPABASE STORAGE
+         
+         BUCKET:
+         xeber-videolari
+      ===================================================== */
+
+      const {
+        error: uploadError,
+      } =
+        await supabase.storage
+          .from('xeber-videolari')
+          .upload(
+            uploadedFileName,
+            video,
+            {
+              cacheControl: '3600',
+              upsert: false,
+              contentType:
+                video.type ||
+                'video/mp4',
+            }
+          );
+
+      if (uploadError) {
+        console.error(
+          'VIDEO STORAGE ERROR:',
+          uploadError
+        );
+
+        throw new Error(
+          `Video Storage-a yüklənmədi: ${uploadError.message}`
+        );
+      }
+
+      /* =====================================================
+         PUBLIC URL
+      ===================================================== */
+
+      const {
+        data: publicData,
+      } =
+        supabase.storage
+          .from('xeber-videolari')
+          .getPublicUrl(
+            uploadedFileName
+          );
+
+      const videoUrl =
+        publicData?.publicUrl;
+
+      if (!videoUrl) {
+        throw new Error(
+          'Video yükləndi, amma public video linki alınmadı.'
+        );
+      }
+
+      console.log(
+        'VIDEO URL:',
+        videoUrl
+      );
+
+      /* =====================================================
+         ARTICLE
+      ===================================================== */
 
       const slug =
-        slugify(title) + '-' + Date.now();
+        slugify(title) +
+        '-' +
+        Date.now();
 
-      const { error } = await supabase
-        .from('articles')
-        .insert({
-          title: title.trim(),
-          excerpt: excerpt.trim(),
-          content: excerpt.trim(),
-          category,
-          source: source.trim(),
-          image_url: '',
-          video_url: uploaded.url,
-          slug,
-          is_featured: false,
-          views: 0,
-        });
+      const {
+        error: articleError,
+      } =
+        await supabase
+          .from('articles')
+          .insert({
+            title: title.trim(),
 
-      if (error) {
-        /*
-          Məqalə əlavə olunmasa belə video storage-də qalır.
-          Ona görə yüklənmiş videonu geri silməyə çalışırıq.
-        */
+            excerpt:
+              excerpt.trim(),
 
-        const fileName =
-          uploaded.url.split('/').pop();
+            content:
+              excerpt.trim(),
 
-        if (fileName) {
+            category,
+
+            source:
+              source.trim(),
+
+            image_url: '',
+
+            video_url:
+              videoUrl,
+
+            slug,
+
+            is_featured: false,
+
+            views: 0,
+          });
+
+      if (articleError) {
+
+        console.error(
+          'ARTICLE INSERT ERROR:',
+          articleError
+        );
+
+        /* ---------------------------------------------
+           ARTICLE ƏLAVƏ OLUNMADI.
+           STORAGE-DAN VİDEONU SİL.
+        --------------------------------------------- */
+
+        if (uploadedFileName) {
           await supabase.storage
-            .from(uploaded.bucket)
-            .remove([fileName]);
+            .from('xeber-videolari')
+            .remove([
+              uploadedFileName,
+            ]);
         }
 
-        throw error;
+        throw new Error(
+          `Video yükləndi, amma xəbər bazaya əlavə olunmadı: ${articleError.message}`
+        );
       }
+
+      /* =====================================================
+         SUCCESS
+      ===================================================== */
 
       setTitle('');
       setExcerpt('');
@@ -1303,44 +1626,49 @@ function VideoForm() {
       setMessage({
         status: 'success',
         text:
-          `Video xəbər uğurla yayımlandı. Bucket: ${uploaded.bucket}`,
+          '🎥 Video xəbər uğurla yayımlandı və sayta əlavə edildi.',
       });
+
     } catch (error) {
+
       console.error(
-        'VIDEO UPLOAD ERROR:',
+        'VIDEO PUBLISH ERROR:',
         error
       );
 
       let errorMessage =
         error?.message ||
-        'Video yüklənmədi.';
+        'Video paylaşılarkən xəta baş verdi.';
 
-      /*
-        Supabase policy xətasını daha başa düşülən göstəririk.
-      */
+      const lower =
+        errorMessage.toLowerCase();
 
       if (
-        errorMessage
-          .toLowerCase()
-          .includes('row-level security')
+        lower.includes(
+          'row-level security'
+        ) ||
+        lower.includes(
+          'new row violates'
+        )
       ) {
         errorMessage =
-          'Video bucket-i var, amma yükləməyə icazə yoxdur. Supabase Storage → Policies bölməsində INSERT policy lazımdır.';
+          'Supabase RLS icazəsi bloklayır. Storage və ya articles üçün INSERT policy-ni yoxlamaq lazımdır.';
       }
 
       if (
-        errorMessage
-          .toLowerCase()
-          .includes('bucket not found')
+        lower.includes(
+          'bucket not found'
+        )
       ) {
         errorMessage =
-          'Video bucket-i tapılmadı. Supabase → Storage bölməsində video bucket-in adını yoxla.';
+          '`xeber-videolari` adlı Storage bucket tapılmadı.';
       }
 
       setMessage({
         status: 'error',
         text: errorMessage,
       });
+
     } finally {
       setLoading(false);
     }
@@ -1353,6 +1681,7 @@ function VideoForm() {
       description="Kompüterindən video seç və saytda yayımla."
       onSubmit={publishVideo}
     >
+
       <TextField
         label="Video başlığı"
         value={title}
@@ -1370,6 +1699,7 @@ function VideoForm() {
       />
 
       <div className="grid md:grid-cols-2 gap-5 mb-6">
+
         <CategorySelect
           value={category}
           onChange={setCategory}
@@ -1381,9 +1711,11 @@ function VideoForm() {
           onChange={setSource}
           placeholder="Mənbə"
         />
+
       </div>
 
       <div className="mb-6">
+
         <FieldLabel required>
           Video faylı
         </FieldLabel>
@@ -1391,11 +1723,14 @@ function VideoForm() {
         <FileDropZone
           selected={video?.name}
           onSelect={(e) => {
+
             const selected =
-              e.target.files?.[0] || null;
+              e.target.files?.[0] ||
+              null;
 
             setVideo(selected);
             setMessage(null);
+
           }}
           accept="video/mp4,video/webm,video/quicktime,video/*"
           icon="🎥"
@@ -1403,11 +1738,12 @@ function VideoForm() {
           title="Video seç"
           hint={
             video
-              ? `${video.name} — ${(video.size / 1024 / 1024).toFixed(1)} MB`
+              ? `${video.name} — ${(video.size / 1024 / 1024).toFixed(2)} MB`
               : 'MP4, MOV, WebM və digər video faylları — maksimum 100 MB'
           }
           minHeight={220}
         />
+
       </div>
 
       {video && (
@@ -1418,23 +1754,33 @@ function VideoForm() {
             background: '#FAFAF8',
           }}
         >
+
           <div className="font-semibold">
             Seçilmiş video
           </div>
 
           <div
             className="text-xs mt-1"
-            style={{ color: c.muted }}
+            style={{
+              color: c.muted,
+            }}
           >
             {video.name}
           </div>
 
           <div
             className="text-xs mt-1"
-            style={{ color: c.muted }}
+            style={{
+              color: c.muted,
+            }}
           >
-            Ölçü: {(video.size / 1024 / 1024).toFixed(2)} MB
+            Ölçü:
+            {' '}
+            {(video.size / 1024 / 1024).toFixed(2)}
+            {' '}
+            MB
           </div>
+
         </div>
       )}
 
@@ -1444,13 +1790,16 @@ function VideoForm() {
       />
 
       <div className="mt-6">
+
         <SubmitButton
           loading={loading}
           loadingText="Video yüklənir..."
         >
           🎥 Videonu yayımla
         </SubmitButton>
+
       </div>
+
     </FormShell>
   );
 }
@@ -1460,25 +1809,39 @@ function VideoForm() {
 ========================================================= */
 
 function GalleryForm() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(
-    CATEGORIES?.[0]?.slug || ''
-  );
-  const [images, setImages] = useState([]);
+  const [title, setTitle] =
+    useState('');
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [description, setDescription] =
+    useState('');
+
+  const [category, setCategory] =
+    useState(
+      CATEGORIES?.[0]?.slug || ''
+    );
+
+  const [images, setImages] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState(null);
 
   function selectImages(e) {
     setImages(
-      Array.from(e.target.files || [])
+      Array.from(
+        e.target.files || []
+      )
     );
   }
 
   function removeImage(index) {
     setImages(
-      images.filter((_, i) => i !== index)
+      images.filter(
+        (_, i) => i !== index
+      )
     );
   }
 
@@ -1489,6 +1852,18 @@ function GalleryForm() {
     setMessage(null);
 
     try {
+
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(
+          'Admin sessiyası tapılmadı.'
+        );
+      }
+
       if (!title.trim()) {
         throw new Error(
           'Qalereyanın başlığını yaz.'
@@ -1504,30 +1879,58 @@ function GalleryForm() {
       const uploadedImages = [];
 
       for (const image of images) {
+
         const extension =
-          image.name.split('.').pop() || 'jpg';
+          image.name
+            .split('.')
+            .pop() ||
+          'jpg';
 
         const fileName =
           `${crypto.randomUUID()}.${extension}`;
 
-        const { error } =
+        const {
+          error: uploadError,
+        } =
           await supabase.storage
             .from('gallery-images')
-            .upload(fileName, image);
+            .upload(
+              fileName,
+              image,
+              {
+                cacheControl: '3600',
+                upsert: false,
+                contentType:
+                  image.type ||
+                  'image/jpeg',
+              }
+            );
 
-        if (error) throw error;
+        if (uploadError) {
+          throw new Error(
+            `Şəkil yüklənmədi: ${uploadError.message}`
+          );
+        }
 
-        const { data } =
+        const {
+          data,
+        } =
           supabase.storage
             .from('gallery-images')
-            .getPublicUrl(fileName);
+            .getPublicUrl(
+              fileName
+            );
 
-        uploadedImages.push(
-          data.publicUrl
-        );
+        if (data?.publicUrl) {
+          uploadedImages.push(
+            data.publicUrl
+          );
+        }
       }
 
-      const { error } =
+      const {
+        error,
+      } =
         await supabase
           .from('photo_galleries')
           .insert({
@@ -1535,10 +1938,15 @@ function GalleryForm() {
             description:
               description.trim(),
             category,
-            images: uploadedImages,
+            images:
+              uploadedImages,
           });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          `Qalereya bazaya əlavə olunmadı: ${error.message}`
+        );
+      }
 
       setTitle('');
       setDescription('');
@@ -1547,10 +1955,15 @@ function GalleryForm() {
       setMessage({
         status: 'success',
         text:
-          'Foto qalereya uğurla yayımlandı.',
+          '📸 Foto qalereya uğurla yayımlandı.',
       });
+
     } catch (error) {
-      console.error(error);
+
+      console.error(
+        'GALLERY ERROR:',
+        error
+      );
 
       setMessage({
         status: 'error',
@@ -1558,6 +1971,7 @@ function GalleryForm() {
           error?.message ||
           'Qalereya yaradılmadı.',
       });
+
     } finally {
       setLoading(false);
     }
@@ -1570,6 +1984,7 @@ function GalleryForm() {
       description="Bir xəbərə bir neçə şəkil əlavə et."
       onSubmit={publishGallery}
     >
+
       <TextField
         label="Qalereya başlığı"
         value={title}
@@ -1587,13 +2002,16 @@ function GalleryForm() {
       />
 
       <div className="mb-6">
+
         <CategorySelect
           value={category}
           onChange={setCategory}
         />
+
       </div>
 
       <div className="mb-6">
+
         <FieldLabel required>
           Şəkillər
         </FieldLabel>
@@ -1610,61 +2028,78 @@ function GalleryForm() {
           icon="📸"
           activeIcon="📸"
           title="Bir neçə şəkil seç"
-          hint="Ctrl (və ya Cmd) düyməsi ilə bir neçə şəkil seçə bilərsən"
+          hint="Bir neçə şəkil seçə bilərsən"
           minHeight={200}
         />
+
       </div>
 
       {images.length > 0 && (
         <div className="mb-6">
+
           <div className="flex items-center justify-between mb-3">
+
             <div
               className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.15em]"
-              style={{ color: c.muted }}
+              style={{
+                color: c.muted,
+              }}
             >
               Seçilmiş şəkillər
             </div>
 
             <div
               className="text-xs"
-              style={{ color: c.muted }}
+              style={{
+                color: c.muted,
+              }}
             >
               {images.length} şəkil
             </div>
+
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {images.map((image, index) => (
-              <div
-                key={`${image.name}-${index}`}
-                className="relative border aspect-square overflow-hidden"
-                style={{
-                  borderColor: c.line,
-                  background: '#F0EFEA',
-                }}
-              >
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={image.name}
-                  className="w-full h-full object-cover"
-                />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    removeImage(index)
-                  }
-                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 text-white text-xs leading-none"
+            {images.map(
+              (image, index) => (
+                <div
+                  key={`${image.name}-${index}`}
+                  className="relative border aspect-square overflow-hidden"
+                  style={{
+                    borderColor: c.line,
+                    background: '#F0EFEA',
+                  }}
                 >
-                  ✕
-                </button>
 
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-2 py-1 truncate font-[family-name:var(--font-mono)]">
-                  {index + 1}. {image.name}
+                  <img
+                    src={URL.createObjectURL(
+                      image
+                    )}
+                    alt={image.name}
+                    className="w-full h-full object-cover"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeImage(index)
+                    }
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 text-white text-xs leading-none"
+                  >
+                    ✕
+                  </button>
+
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-2 py-1 truncate font-[family-name:var(--font-mono)]">
+                    {index + 1}. {image.name}
+                  </div>
+
                 </div>
-              </div>
-            ))}
+              )
+            )}
+
           </div>
+
         </div>
       )}
 
@@ -1674,13 +2109,16 @@ function GalleryForm() {
       />
 
       <div className="mt-6">
+
         <SubmitButton
           loading={loading}
           loadingText="Şəkillər yüklənir..."
         >
           📸 Qalereyanı yayımla
         </SubmitButton>
+
       </div>
+
     </FormShell>
   );
 }
@@ -1690,16 +2128,29 @@ function GalleryForm() {
 ========================================================= */
 
 function AdvertisementForm() {
-  const [title, setTitle] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
+  const [title, setTitle] =
+    useState('');
+
+  const [linkUrl, setLinkUrl] =
+    useState('');
+
   const [position, setPosition] =
     useState('homepage');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [image, setImage] = useState(null);
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [startDate, setStartDate] =
+    useState('');
+
+  const [endDate, setEndDate] =
+    useState('');
+
+  const [image, setImage] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState(null);
 
   async function publishAdvertisement(e) {
     e.preventDefault();
@@ -1708,6 +2159,18 @@ function AdvertisementForm() {
     setMessage(null);
 
     try {
+
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(
+          'Admin sessiyası tapılmadı.'
+        );
+      }
+
       if (!title.trim()) {
         throw new Error(
           'Reklam adı yazılmalıdır.'
@@ -1717,28 +2180,55 @@ function AdvertisementForm() {
       let imageUrl = '';
 
       if (image) {
+
         const extension =
-          image.name.split('.').pop() || 'jpg';
+          image.name
+            .split('.')
+            .pop() ||
+          'jpg';
 
         const fileName =
           `${crypto.randomUUID()}.${extension}`;
 
-        const { error } =
+        const {
+          error: uploadError,
+        } =
           await supabase.storage
             .from('advertisements')
-            .upload(fileName, image);
+            .upload(
+              fileName,
+              image,
+              {
+                cacheControl: '3600',
+                upsert: false,
+                contentType:
+                  image.type ||
+                  'image/jpeg',
+              }
+            );
 
-        if (error) throw error;
+        if (uploadError) {
+          throw new Error(
+            `Reklam şəkli yüklənmədi: ${uploadError.message}`
+          );
+        }
 
-        const { data } =
+        const {
+          data,
+        } =
           supabase.storage
             .from('advertisements')
-            .getPublicUrl(fileName);
+            .getPublicUrl(
+              fileName
+            );
 
-        imageUrl = data.publicUrl;
+        imageUrl =
+          data?.publicUrl || '';
       }
 
-      const { error } =
+      const {
+        error,
+      } =
         await supabase
           .from('advertisements')
           .insert({
@@ -1753,7 +2243,11 @@ function AdvertisementForm() {
             is_active: true,
           });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(
+          `Reklam bazaya əlavə olunmadı: ${error.message}`
+        );
+      }
 
       setTitle('');
       setLinkUrl('');
@@ -1764,10 +2258,15 @@ function AdvertisementForm() {
       setMessage({
         status: 'success',
         text:
-          'Reklam uğurla əlavə edildi.',
+          '📢 Reklam uğurla əlavə edildi.',
       });
+
     } catch (error) {
-      console.error(error);
+
+      console.error(
+        'ADVERTISEMENT ERROR:',
+        error
+      );
 
       setMessage({
         status: 'error',
@@ -1775,6 +2274,7 @@ function AdvertisementForm() {
           error?.message ||
           'Reklam əlavə olunmadı.',
       });
+
     } finally {
       setLoading(false);
     }
@@ -1787,6 +2287,7 @@ function AdvertisementForm() {
       description="Saytda göstəriləcək reklamı əlavə et."
       onSubmit={publishAdvertisement}
     >
+
       <TextField
         label="Reklam adı"
         value={title}
@@ -1803,6 +2304,7 @@ function AdvertisementForm() {
       />
 
       <div className="grid md:grid-cols-3 gap-5 mb-6">
+
         <SelectField
           label="Mövqe"
           value={position}
@@ -1821,6 +2323,7 @@ function AdvertisementForm() {
         />
 
         <div>
+
           <FieldLabel>
             Başlama tarixi
           </FieldLabel>
@@ -1829,14 +2332,20 @@ function AdvertisementForm() {
             type="datetime-local"
             value={startDate}
             onChange={(e) =>
-              setStartDate(e.target.value)
+              setStartDate(
+                e.target.value
+              )
             }
             className={fieldClass}
-            style={{ borderColor: c.line }}
+            style={{
+              borderColor: c.line,
+            }}
           />
+
         </div>
 
         <div>
+
           <FieldLabel>
             Bitmə tarixi
           </FieldLabel>
@@ -1845,15 +2354,22 @@ function AdvertisementForm() {
             type="datetime-local"
             value={endDate}
             onChange={(e) =>
-              setEndDate(e.target.value)
+              setEndDate(
+                e.target.value
+              )
             }
             className={fieldClass}
-            style={{ borderColor: c.line }}
+            style={{
+              borderColor: c.line,
+            }}
           />
+
         </div>
+
       </div>
 
       <div className="mb-6">
+
         <FieldLabel>
           Reklam şəkli
         </FieldLabel>
@@ -1862,7 +2378,8 @@ function AdvertisementForm() {
           selected={image?.name}
           onSelect={(e) =>
             setImage(
-              e.target.files?.[0] || null
+              e.target.files?.[0] ||
+              null
             )
           }
           accept="image/*"
@@ -1872,6 +2389,7 @@ function AdvertisementForm() {
           hint=" "
           minHeight={180}
         />
+
       </div>
 
       <Banner
@@ -1880,13 +2398,16 @@ function AdvertisementForm() {
       />
 
       <div className="mt-6">
+
         <SubmitButton
           loading={loading}
           loadingText="Yüklənir..."
         >
           📢 Reklamı əlavə et
         </SubmitButton>
+
       </div>
+
     </FormShell>
   );
 }
@@ -1896,9 +2417,14 @@ function AdvertisementForm() {
 ========================================================= */
 
 function Statistics() {
-  const [articles, setArticles] = useState([]);
-  const [galleries, setGalleries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [articles, setArticles] =
+    useState([]);
+
+  const [galleries, setGalleries] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     loadStatistics();
@@ -1907,44 +2433,94 @@ function Statistics() {
   async function loadStatistics() {
     setLoading(true);
 
-    const { data: articleData } =
-      await supabase
-        .from('articles')
-        .select(
-          'id,title,views,video_url,created_at'
-        )
-        .order('created_at', {
-          ascending: false,
-        });
+    try {
 
-    const { data: galleryData } =
-      await supabase
-        .from('photo_galleries')
-        .select('id,title,created_at')
-        .order('created_at', {
-          ascending: false,
-        });
+      const {
+        data: articleData,
+        error: articleError,
+      } =
+        await supabase
+          .from('articles')
+          .select(
+            'id,title,views,video_url,created_at'
+          )
+          .order(
+            'created_at',
+            {
+              ascending: false,
+            }
+          );
 
-    setArticles(articleData || []);
-    setGalleries(galleryData || []);
-    setLoading(false);
+      if (articleError) {
+        console.error(
+          'STAT ARTICLES ERROR:',
+          articleError
+        );
+      }
+
+      const {
+        data: galleryData,
+        error: galleryError,
+      } =
+        await supabase
+          .from('photo_galleries')
+          .select(
+            'id,title,created_at'
+          )
+          .order(
+            'created_at',
+            {
+              ascending: false,
+            }
+          );
+
+      if (galleryError) {
+        console.error(
+          'STAT GALLERY ERROR:',
+          galleryError
+        );
+      }
+
+      setArticles(
+        articleData || []
+      );
+
+      setGalleries(
+        galleryData || []
+      );
+
+    } catch (error) {
+
+      console.error(
+        'STATISTICS ERROR:',
+        error
+      );
+
+    } finally {
+      setLoading(false);
+    }
   }
 
   const totalViews =
     articles.reduce(
       (sum, item) =>
-        sum + Number(item.views || 0),
+        sum +
+        Number(
+          item.views || 0
+        ),
       0
     );
 
   const videos =
     articles.filter(
-      (item) => item.video_url
+      (item) =>
+        item.video_url
     );
 
   const news =
     articles.filter(
-      (item) => !item.video_url
+      (item) =>
+        !item.video_url
     );
 
   return (
@@ -1956,7 +2532,9 @@ function Statistics() {
         e.preventDefault()
       }
     >
+
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
         <StatCard
           title="Xəbərlər"
           value={news.length}
@@ -1985,19 +2563,27 @@ function Statistics() {
           loading={loading}
           accent
         />
+
       </div>
 
       <div
         className="border"
-        style={{ borderColor: c.line }}
+        style={{
+          borderColor: c.line,
+        }}
       >
+
         <div
           className="px-6 py-4 border-b"
-          style={{ borderColor: c.line }}
+          style={{
+            borderColor: c.line,
+          }}
         >
+
           <h2 className="font-[family-name:var(--font-display)] font-bold">
             Son paylaşımlar
           </h2>
+
         </div>
 
         {articles.length === 0 ? (
@@ -2005,77 +2591,51 @@ function Statistics() {
         ) : (
           articles
             .slice(0, 10)
-            .map((article) => (
-              <div
-                key={article.id}
-                className="px-6 py-4 border-b last:border-b-0 flex items-center justify-between gap-4"
-                style={{
-                  borderColor: c.line,
-                }}
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">
-                    {article.title}
+            .map(
+              (article) => (
+                <div
+                  key={article.id}
+                  className="px-6 py-4 border-b last:border-b-0 flex items-center justify-between gap-4"
+                  style={{
+                    borderColor: c.line,
+                  }}
+                >
+
+                  <div className="min-w-0">
+
+                    <div className="text-sm font-semibold truncate">
+                      {article.title}
+                    </div>
+
+                    <div
+                      className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mt-1"
+                      style={{
+                        color: c.muted,
+                      }}
+                    >
+                      {article.video_url
+                        ? '🎥 Video'
+                        : '📰 Xəbər'}
+                    </div>
+
                   </div>
 
                   <div
-                    className="font-[family-name:var(--font-mono)] text-[9px] uppercase tracking-wider mt-1"
+                    className="font-[family-name:var(--font-mono)] text-xs shrink-0"
                     style={{
                       color: c.muted,
                     }}
                   >
-                    {article.video_url
-                      ? '🎥 Video'
-                      : '📰 Xəbər'}
+                    {article.views || 0} baxış
                   </div>
-                </div>
 
-                <div
-                  className="font-[family-name:var(--font-mono)] text-xs shrink-0"
-                  style={{
-                    color: c.muted,
-                  }}
-                >
-                  {article.views || 0} baxış
                 </div>
-              </div>
-            ))
+              )
+            )
         )}
+
       </div>
+
     </FormShell>
   );
-}
-
-/* =========================================================
-   SLUG
-========================================================= */
-
-function slugify(text) {
-  const map = {
-    ə: 'e',
-    Ə: 'e',
-    ı: 'i',
-    İ: 'i',
-    ö: 'o',
-    Ö: 'o',
-    ü: 'u',
-    Ü: 'u',
-    ş: 's',
-    Ş: 's',
-    ç: 'c',
-    Ç: 'c',
-    ğ: 'g',
-    Ğ: 'g',
-  };
-
-  return text
-    .split('')
-    .map(
-      (char) =>
-        map[char] || char
-    )
-    .join('')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
