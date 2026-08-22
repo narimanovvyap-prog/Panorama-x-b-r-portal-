@@ -1,862 +1,663 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { CATEGORIES } from '@/lib/categories';
+
+const emptyForm = {
+  title: '',
+  excerpt: '',
+  content: '',
+  category: CATEGORIES?.[0]?.slug || 'siyaset',
+  source: '',
+  image_url: '',
+  video_url: '',
+  is_featured: false,
+};
 
 export default function AdminDashboard() {
-  const router = useRouter();
-
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const [stats, setStats] = useState({
-    articles: 0,
-    videos: 0,
-    views: 0,
-    live: 0,
-  });
-
-  const [latestArticles, setLatestArticles] = useState([]);
-  const [liveNews, setLiveNews] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingArticles, setLoadingArticles] = useState(true);
+  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  /* =====================================================
-     AUTH
-  ===================================================== */
+  const [activeTab, setActiveTab] = useState('news');
 
   useEffect(() => {
-    async function checkUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    loadArticles();
+  }, []);
 
-      if (!user) {
-        router.replace('/admin');
-        return;
-      }
+  async function loadArticles() {
+    setLoadingArticles(true);
 
-      setUser(user);
-      setLoading(false);
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error) {
+      setArticles(data || []);
     }
 
-    checkUser();
-  }, [router]);
+    setLoadingArticles(false);
+  }
 
-  /* =====================================================
-     DATA
-  ===================================================== */
+  function handleChange(e) {
+    const { name, value, type, checked } = e.target;
 
-  useEffect(() => {
-    if (!user) return;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  }
 
-    loadDashboard();
-  }, [user]);
+  function createSlug(title) {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/ə/g, 'e')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ğ/g, 'g')
+      .replace(/ş/g, 's')
+      .replace(/ç/g, 'c')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  }
 
-  async function loadDashboard() {
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    setMessage('');
     setError('');
+    setLoading(true);
 
-    try {
-      /* BÜTÜN XƏBƏRLƏR */
-
-      const {
-        data: articles,
-        error: articlesError,
-      } = await supabase
-        .from('articles')
-        .select(
-          'id,title,slug,category,views,created_at,video_url,is_featured'
-        )
-        .order('created_at', {
-          ascending: false,
-        });
-
-      if (articlesError) {
-        throw articlesError;
-      }
-
-      const allArticles = articles || [];
-
-      /* VİDEOLAR */
-
-      const videos = allArticles.filter(
-        (article) =>
-          article.video_url &&
-          article.video_url.trim() !== ''
-      );
-
-      /* BAXIŞLAR */
-
-      const totalViews = allArticles.reduce(
-        (total, article) =>
-          total + Number(article.views || 0),
-        0
-      );
-
-      /* CANLI XƏBƏRLƏR */
-
-      let live = [];
-
-      const {
-        data: liveData,
-        error: liveError,
-      } = await supabase
-        .from('live_news')
-        .select('*')
-        .order('created_at', {
-          ascending: false,
-        })
-        .limit(8);
-
-      if (!liveError) {
-        live = liveData || [];
-      }
-
-      setStats({
-        articles: allArticles.length,
-        videos: videos.length,
-        views: totalViews,
-        live: live.length,
-      });
-
-      setLatestArticles(
-        allArticles.slice(0, 8)
-      );
-
-      setLiveNews(live);
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        'Məlumatları yükləmək mümkün olmadı.'
-      );
+    if (!form.title.trim()) {
+      setError('Xəbərin başlığını yaz.');
+      setLoading(false);
+      return;
     }
-  }
 
-  /* =====================================================
-     LOGOUT
-  ===================================================== */
+    if (!form.content.trim()) {
+      setError('Xəbərin mətnini yaz.');
+      setLoading(false);
+      return;
+    }
 
-  async function logout() {
-    await supabase.auth.signOut();
+    if (activeTab === 'video' && !form.video_url.trim()) {
+      setError('Video xəbəri üçün video URL daxil et.');
+      setLoading(false);
+      return;
+    }
 
-    router.replace('/admin');
-  }
+    const slug =
+      createSlug(form.title) +
+      '-' +
+      Date.now().toString().slice(-6);
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
+    const articleData = {
+      title: form.title.trim(),
+      excerpt: form.excerpt.trim(),
+      content: form.content.trim(),
+      category: form.category,
+      source: form.source.trim(),
+      image_url: form.image_url.trim() || null,
+      video_url:
+        activeTab === 'video'
+          ? form.video_url.trim()
+          : null,
+      is_featured:
+        activeTab === 'news'
+          ? form.is_featured
+          : false,
+      slug,
+      views: 0,
+    };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
-        <div className="text-sm text-gray-500">
-          Admin panel yüklənir...
-        </div>
-      </div>
+    const { error } = await supabase
+      .from('articles')
+      .insert([articleData]);
+
+    if (error) {
+      console.error(error);
+      setError(
+        'Xəbər əlavə olunmadı: ' +
+          error.message
+      );
+      setLoading(false);
+      return;
+    }
+
+    setMessage(
+      activeTab === 'video'
+        ? '🎥 Video xəbər uğurla paylaşıldı!'
+        : '📰 Xəbər uğurla paylaşıldı!'
     );
+
+    setForm(emptyForm);
+
+    await loadArticles();
+
+    setLoading(false);
   }
 
-  /* =====================================================
-     DASHBOARD
-  ===================================================== */
+  async function deleteArticle(id) {
+    const ok = window.confirm(
+      'Bu xəbəri silmək istədiyinə əminsən?'
+    );
+
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('articles')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      setError(
+        'Xəbər silinmədi: ' + error.message
+      );
+      return;
+    }
+
+    setMessage('Xəbər silindi.');
+    loadArticles();
+  }
+
+  function resetForm() {
+    setForm(emptyForm);
+    setMessage('');
+    setError('');
+  }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa] text-[#172b4d]">
+    <main className="min-h-screen bg-[#f5f6f8]">
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      {/* HEADER */}
 
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-5 lg:px-8">
+      <header className="bg-[#172b4d] text-white">
+        <div className="max-w-7xl mx-auto px-4 py-6">
 
-        <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-          <div className="w-9 h-9 bg-[#172b4d] text-white flex items-center justify-center font-black text-sm">
-            P
-          </div>
+            <div>
+              <div className="text-[10px] tracking-[0.25em] uppercase text-white/50">
+                PANORAMA
+              </div>
 
-          <div>
-            <div className="font-bold text-sm tracking-wide">
-              PANORAMA
+              <h1 className="text-2xl md:text-3xl font-bold mt-1">
+                Admin panel
+              </h1>
+
+              <p className="text-sm text-white/60 mt-1">
+                Xəbərləri və video xəbərləri idarə et
+              </p>
             </div>
 
-            <div className="text-[9px] text-gray-400 uppercase tracking-[0.18em]">
-              Admin Panel
-            </div>
+            <a
+              href="/"
+              className="border border-white/20 px-4 py-2 text-sm hover:bg-white/10 transition"
+            >
+              ← Sayta bax
+            </a>
+
           </div>
 
         </div>
-
-        <div className="flex items-center gap-4">
-
-          <Link
-            href="/"
-            className="hidden sm:block text-xs font-semibold text-gray-500 hover:text-[#172b4d]"
-          >
-            Sayta bax →
-          </Link>
-
-          <div className="hidden sm:flex items-center gap-2">
-
-            <div className="w-8 h-8 rounded-full bg-[#172b4d] text-white flex items-center justify-center text-xs font-bold">
-              A
-            </div>
-
-            <div className="text-xs">
-              Admin
-            </div>
-
-          </div>
-
-          <button
-            onClick={logout}
-            className="text-xs font-semibold text-red-500 hover:text-red-700"
-          >
-            Çıxış
-          </button>
-
-        </div>
-
       </header>
 
-      {/* =================================================
-          LAYOUT
-      ================================================= */}
+      {/* CONTENT */}
 
-      <div className="flex">
+      <div className="max-w-7xl mx-auto px-4 py-6">
 
-        {/* =================================================
-            SIDEBAR
-        ================================================= */}
+        {/* ÜST MENYU */}
 
-        <aside className="hidden md:block w-[190px] min-h-[calc(100vh-64px)] bg-[#172b4d] text-white flex-none">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 
-          <div className="p-4">
-
-            <div className="text-[9px] text-white/40 uppercase tracking-[0.2em] mb-4">
-              İdarəetmə
+          <div className="bg-white border border-gray-200 p-4">
+            <div className="text-xs text-gray-400">
+              Ümumi xəbərlər
             </div>
 
-            <nav className="space-y-1">
-
-              <SidebarItem
-                href="/admin/dashboard"
-                icon="⌂"
-                text="İcmal"
-                active
-              />
-
-              <SidebarItem
-                href="/admin/dashboard/live"
-                icon="●"
-                text="Canlı lent"
-              />
-
-              <SidebarItem
-                href="/admin/dashboard/statistics"
-                icon="◈"
-                text="Statistika"
-              />
-
-              <SidebarItem
-                href="/admin/dashboard/parliament"
-                icon="▣"
-                text="Parlament"
-              />
-
-              <SidebarItem
-                href="/admin/dashboard/advertisements"
-                icon="▤"
-                text="Reklamlar"
-              />
-
-              <SidebarItem
-                href="/admin/dashboard/settings"
-                icon="⚙"
-                text="Parametrlər"
-              />
-
-            </nav>
-
+            <div className="text-2xl font-bold text-[#172b4d] mt-1">
+              {articles.length}
+            </div>
           </div>
 
-          <div className="mx-4 border-t border-white/10 pt-4 mt-2">
+          <div className="bg-white border border-gray-200 p-4">
+            <div className="text-xs text-gray-400">
+              Video xəbərlər
+            </div>
 
-            <Link
-              href="/"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-xs text-white/60 hover:text-white hover:bg-white/5 transition"
-            >
-              <span>←</span>
-              <span>Sayta qayıt</span>
-            </Link>
-
+            <div className="text-2xl font-bold text-[#172b4d] mt-1">
+              {
+                articles.filter(
+                  (item) =>
+                    item.video_url
+                ).length
+              }
+            </div>
           </div>
 
-        </aside>
-
-        {/* =================================================
-            MAIN
-        ================================================= */}
-
-        <main className="flex-1 min-w-0 p-4 lg:p-7">
-
-          {/* TITLE */}
-
-          <div className="mb-5">
-
-            <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-              PANORAMA / İDARƏETMƏ
+          <div className="bg-white border border-gray-200 p-4">
+            <div className="text-xs text-gray-400">
+              Baş xəbərlər
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-
-              <div>
-
-                <h1 className="text-2xl lg:text-3xl font-bold">
-                  İdarə paneli
-                </h1>
-
-                <p className="text-sm text-gray-500 mt-1">
-                  Saytın əsas göstəricilərinə ümumi baxış.
-                </p>
-
-              </div>
-
-              <div className="text-xs text-gray-400">
-                {new Date().toLocaleDateString(
-                  'az-AZ',
-                  {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  }
-                )}
-              </div>
-
+            <div className="text-2xl font-bold text-[#172b4d] mt-1">
+              {
+                articles.filter(
+                  (item) =>
+                    item.is_featured
+                ).length
+              }
             </div>
-
           </div>
 
-          {/* ERROR */}
-
-          {error && (
-            <div className="mb-5 border border-red-200 bg-red-50 text-red-600 px-4 py-3 text-xs">
-              {error}
-            </div>
-          )}
-
-          {/* =================================================
-              STATISTICS
-          ================================================= */}
-
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-
-            <StatCard
-              title="Xəbərlər"
-              value={stats.articles}
-              icon="📰"
-              description="Ümumi xəbər"
-            />
-
-            <StatCard
-              title="Videolar"
-              value={stats.videos}
-              icon="▶"
-              description="Video xəbər"
-            />
-
-            <StatCard
-              title="Baxışlar"
-              value={stats.views}
-              icon="◉"
-              description="Ümumi baxış"
-            />
-
-            <StatCard
-              title="Canlı"
-              value={stats.live}
-              icon="●"
-              description="Canlı lent"
-              live
-            />
-
-          </section>
-
-          {/* =================================================
-              LIVE + QUICK ACTIONS
-          ================================================= */}
-
-          <section className="grid xl:grid-cols-[1.6fr_0.8fr] gap-5 mb-5">
-
-            {/* LIVE */}
-
-            <div className="bg-white border border-gray-200">
-
-              <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-
-                <div>
-
-                  <div className="flex items-center gap-2">
-
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-
-                    <h2 className="font-bold text-base">
-                      Canlı xəbər lenti
-                    </h2>
-
-                  </div>
-
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Son daxil olan canlı məlumatlar
-                  </p>
-
-                </div>
-
-                <Link
-                  href="/admin/dashboard/live"
-                  className="text-[11px] font-semibold text-[#1D4E89]"
-                >
-                  Hamısına bax →
-                </Link>
-
-              </div>
-
-              <div>
-
-                {liveNews.length > 0 ? (
-
-                  liveNews.slice(0, 5).map(
-                    (item, index) => (
-
-                      <div
-                        key={
-                          item.id ||
-                          index
-                        }
-                        className="px-5 py-3 border-b border-gray-100 last:border-0 flex gap-4"
-                      >
-
-                        <div className="w-[55px] flex-none text-[10px] text-gray-400 pt-1">
-                          {new Date(
-                            item.created_at
-                          ).toLocaleTimeString(
-                            'az-AZ',
-                            {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-
-                          <div className="text-[9px] uppercase tracking-wider text-red-500 font-bold mb-1">
-                            CANLI
-                          </div>
-
-                          <div className="text-sm font-semibold leading-snug">
-                            {item.title ||
-                              item.text ||
-                              item.content ||
-                              'Canlı xəbər'}
-                          </div>
-
-                        </div>
-
-                      </div>
-
-                    )
-                  )
-
-                ) : (
-
-                  <div className="px-5 py-10 text-center">
-
-                    <div className="text-3xl mb-2">
-                      ◌
-                    </div>
-
-                    <p className="text-sm text-gray-400">
-                      Hazırda canlı xəbər yoxdur.
-                    </p>
-
-                  </div>
-
-                )}
-
-              </div>
-
+          <div className="bg-white border border-gray-200 p-4">
+            <div className="text-xs text-gray-400">
+              Status
             </div>
 
-            {/* QUICK ACTIONS */}
-
-            <div className="bg-white border border-gray-200">
-
-              <div className="px-5 py-4 border-b border-gray-200">
-
-                <h2 className="font-bold text-base">
-                  Sürətli keçid
-                </h2>
-
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Əsas idarəetmə bölmələri
-                </p>
-
-              </div>
-
-              <div className="p-4 grid grid-cols-2 gap-2">
-
-                <QuickAction
-                  href="/admin/dashboard/live"
-                  icon="🔴"
-                  title="Canlı"
-                />
-
-                <QuickAction
-                  href="/admin/dashboard/statistics"
-                  icon="📊"
-                  title="Statistika"
-                />
-
-                <QuickAction
-                  href="/admin/dashboard/parliament"
-                  icon="🏛️"
-                  title="Parlament"
-                />
-
-                <QuickAction
-                  href="/admin/dashboard/advertisements"
-                  icon="📢"
-                  title="Reklam"
-                />
-
-              </div>
-
+            <div className="text-sm font-bold text-green-600 mt-2">
+              ● Sistem aktivdir
             </div>
+          </div>
 
-          </section>
+        </div>
 
-          {/* =================================================
-              LATEST ARTICLES
-          ================================================= */}
+        <div className="grid lg:grid-cols-[1fr_360px] gap-6">
+
+          {/* SOL — XƏBƏR PAYLAŞ */}
 
           <section className="bg-white border border-gray-200">
 
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="border-b border-gray-200 px-5 py-4">
+
+              <h2 className="text-xl font-bold text-[#172b4d]">
+                Xəbər paylaş
+              </h2>
+
+              <p className="text-xs text-gray-400 mt-1">
+                Saytda yayımlamaq üçün yeni xəbər əlavə et
+              </p>
+
+            </div>
+
+            {/* TABLAR */}
+
+            <div className="grid grid-cols-2 border-b border-gray-200">
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('news');
+                  setForm(emptyForm);
+                  setMessage('');
+                  setError('');
+                }}
+                className={`py-4 text-sm font-semibold ${
+                  activeTab === 'news'
+                    ? 'bg-[#172b4d] text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                📰 Adi xəbər
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('video');
+                  setForm(emptyForm);
+                  setMessage('');
+                  setError('');
+                }}
+                className={`py-4 text-sm font-semibold ${
+                  activeTab === 'video'
+                    ? 'bg-[#172b4d] text-white'
+                    : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                🎥 Video xəbər
+              </button>
+
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-5"
+            >
+
+              {/* BAŞLIQ */}
 
               <div>
+                <label className="block text-xs font-bold text-gray-600 mb-2">
+                  Xəbər başlığı *
+                </label>
 
-                <h2 className="font-bold text-base">
-                  Son xəbərlər
-                </h2>
+                <input
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  placeholder="Məsələn: Azərbaycanda mühüm qərar qəbul edildi"
+                  className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#172b4d]"
+                  required
+                />
+              </div>
 
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Sistemdə ən son əlavə olunan xəbərlər
-                </p>
+              {/* QISA MƏTN */}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-2">
+                  Qısa açıqlama
+                </label>
+
+                <textarea
+                  name="excerpt"
+                  value={form.excerpt}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Xəbərin qısa açıqlaması..."
+                  className="w-full border border-gray-300 px-4 py-3 text-sm resize-none outline-none focus:border-[#172b4d]"
+                />
+              </div>
+
+              {/* TAM MƏTN */}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-2">
+                  Xəbərin tam mətni *
+                </label>
+
+                <textarea
+                  name="content"
+                  value={form.content}
+                  onChange={handleChange}
+                  rows={12}
+                  placeholder="Xəbərin tam mətnini buraya yaz..."
+                  className="w-full border border-gray-300 px-4 py-3 text-sm resize-y outline-none focus:border-[#172b4d]"
+                  required
+                />
+              </div>
+
+              {/* KATEQORİYA + MƏNBƏ */}
+
+              <div className="grid md:grid-cols-2 gap-4">
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-2">
+                    Kateqoriya
+                  </label>
+
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 px-4 py-3 text-sm bg-white outline-none focus:border-[#172b4d]"
+                  >
+                    {CATEGORIES.map(
+                      (category) => (
+                        <option
+                          key={category.slug}
+                          value={category.slug}
+                        >
+                          {category.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-2">
+                    Mənbə
+                  </label>
+
+                  <input
+                    name="source"
+                    value={form.source}
+                    onChange={handleChange}
+                    placeholder="Məsələn: APA, Report..."
+                    className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#172b4d]"
+                  />
+                </div>
 
               </div>
 
-              <Link
-                href="/admin/dashboard/articles"
-                className="text-[11px] font-semibold text-[#1D4E89]"
-              >
-                Hamısına bax →
-              </Link>
+              {/* ŞƏKİL */}
 
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-2">
+                  Şəkil URL-i
+                </label>
 
-            {/* TABLE */}
+                <input
+                  name="image_url"
+                  value={form.image_url}
+                  onChange={handleChange}
+                  placeholder="https://..."
+                  className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#172b4d]"
+                />
 
-            <div className="overflow-x-auto">
+                {form.image_url && (
+                  <div className="mt-3 border border-gray-200 overflow-hidden">
 
-              <table className="w-full min-w-[700px]">
+                    <img
+                      src={form.image_url}
+                      alt="Önizləmə"
+                      className="w-full max-h-[260px] object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display =
+                          'none';
+                      }}
+                    />
 
-                <thead>
+                  </div>
+                )}
+              </div>
 
-                  <tr className="bg-[#f8f9fb] text-left">
+              {/* VIDEO */}
 
-                    <th className="px-5 py-3 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                      Xəbər
-                    </th>
+              {activeTab === 'video' && (
+                <div>
 
-                    <th className="px-4 py-3 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                      Kateqoriya
-                    </th>
+                  <label className="block text-xs font-bold text-gray-600 mb-2">
+                    Video URL-i *
+                  </label>
 
-                    <th className="px-4 py-3 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                      Baxış
-                    </th>
+                  <input
+                    name="video_url"
+                    value={form.video_url}
+                    onChange={handleChange}
+                    placeholder="https://..."
+                    className="w-full border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#172b4d]"
+                    required
+                  />
 
-                    <th className="px-4 py-3 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                      Tarix
-                    </th>
+                  <p className="text-[11px] text-gray-400 mt-2">
+                    Video faylının birbaşa URL ünvanını daxil et.
+                  </p>
+                </div>
+              )}
 
-                    <th className="px-4 py-3 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-                      Status
-                    </th>
+              {/* BAŞ XƏBƏR */}
 
-                  </tr>
+              {activeTab === 'news' && (
+                <label className="flex items-center gap-3 border border-gray-200 bg-gray-50 px-4 py-4 cursor-pointer">
 
-                </thead>
+                  <input
+                    type="checkbox"
+                    name="is_featured"
+                    checked={form.is_featured}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
 
-                <tbody>
+                  <div>
+                    <div className="text-sm font-bold text-[#172b4d]">
+                      ⭐ Baş xəbər et
+                    </div>
 
-                  {latestArticles.length > 0 ? (
+                    <div className="text-[11px] text-gray-400 mt-1">
+                      Bu xəbər əsas səhifədə böyük şəkildə göstəriləcək.
+                    </div>
+                  </div>
 
-                    latestArticles.map(
-                      (article) => (
+                </label>
+              )}
 
-                        <tr
-                          key={article.id}
-                          className="border-t border-gray-100 hover:bg-gray-50 transition"
-                        >
+              {/* MESAJ */}
 
-                          <td className="px-5 py-3">
+              {message && (
+                <div className="border border-green-200 bg-green-50 text-green-700 px-4 py-3 text-sm">
+                  {message}
+                </div>
+              )}
 
-                            <div className="max-w-[360px]">
+              {error && (
+                <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {error}
+                </div>
+              )}
 
-                              <div className="text-sm font-semibold truncate">
-                                {article.title}
-                              </div>
+              {/* BUTTONS */}
 
-                              {article.video_url && (
-                                <span className="text-[9px] text-[#1D4E89] font-bold">
-                                  VIDEO
-                                </span>
-                              )}
+              <div className="flex flex-col sm:flex-row gap-3">
 
-                            </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-[#172b4d] text-white py-3.5 text-sm font-bold hover:bg-[#1D4E89] transition disabled:opacity-50"
+                >
+                  {loading
+                    ? 'Paylaşılır...'
+                    : activeTab === 'video'
+                    ? '🎥 Video xəbəri paylaş'
+                    : '📰 Xəbəri paylaş'}
+                </button>
 
-                          </td>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="border border-gray-300 px-6 py-3.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  Təmizlə
+                </button>
 
-                          <td className="px-4 py-3">
+              </div>
 
-                            <span className="text-[10px] font-semibold bg-gray-100 px-2 py-1 rounded">
-                              {article.category ||
-                                '—'}
-                            </span>
-
-                          </td>
-
-                          <td className="px-4 py-3">
-
-                            <span className="text-xs text-gray-500">
-                              {Number(
-                                article.views || 0
-                              ).toLocaleString(
-                                'az-AZ'
-                              )}
-                            </span>
-
-                          </td>
-
-                          <td className="px-4 py-3">
-
-                            <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                              {new Date(
-                                article.created_at
-                              ).toLocaleDateString(
-                                'az-AZ'
-                              )}
-                            </span>
-
-                          </td>
-
-                          <td className="px-4 py-3">
-
-                            {article.is_featured ? (
-
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-amber-50 text-amber-600 px-2 py-1">
-                                ★ BAŞ XƏBƏR
-                              </span>
-
-                            ) : (
-
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-green-50 text-green-600 px-2 py-1">
-                                ● AKTİV
-                              </span>
-
-                            )}
-
-                          </td>
-
-                        </tr>
-
-                      )
-                    )
-
-                  ) : (
-
-                    <tr>
-
-                      <td
-                        colSpan="5"
-                        className="px-5 py-12 text-center text-sm text-gray-400"
-                      >
-                        Hələ xəbər əlavə edilməyib.
-                      </td>
-
-                    </tr>
-
-                  )}
-
-                </tbody>
-
-              </table>
-
-            </div>
+            </form>
 
           </section>
 
-          {/* =================================================
-              FOOTER INFO
-          ================================================= */}
+          {/* SAĞ — SON XƏBƏRLƏR */}
 
-          <div className="mt-5 flex flex-col sm:flex-row justify-between gap-2 text-[10px] text-gray-400">
+          <aside className="bg-white border border-gray-200 h-fit">
 
-            <span>
-              PANORAMA — Peşəkar Xəbər Agentliyi
-            </span>
+            <div className="px-5 py-4 border-b border-gray-200">
 
-            <span>
-              Admin panel
-            </span>
+              <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400">
+                PANORAMA
+              </div>
 
-          </div>
+              <h2 className="text-lg font-bold text-[#172b4d] mt-1">
+                Son paylaşımlar
+              </h2>
 
-        </main>
+            </div>
 
-      </div>
+            {loadingArticles ? (
 
-    </div>
-  );
-}
+              <div className="p-5 text-sm text-gray-400">
+                Yüklənir...
+              </div>
 
-/* =========================================================
-   SIDEBAR ITEM
-========================================================= */
+            ) : articles.length === 0 ? (
 
-function SidebarItem({
-  href,
-  icon,
-  text,
-  active = false,
-}) {
-  return (
-    <Link
-      href={href}
-      className={`
-        flex items-center gap-3
-        px-3 py-2.5
-        rounded-md
-        text-xs
-        transition
-        ${
-          active
-            ? 'bg-white/10 text-white font-semibold'
-            : 'text-white/60 hover:text-white hover:bg-white/5'
-        }
-      `}
-    >
+              <div className="p-5 text-sm text-gray-400">
+                Hələ xəbər yoxdur.
+              </div>
 
-      <span
-        className={
-          active
-            ? 'text-white'
-            : 'text-white/40'
-        }
-      >
-        {icon}
-      </span>
+            ) : (
 
-      <span>
-        {text}
-      </span>
+              <div>
 
-    </Link>
-  );
-}
+                {articles.map((article) => (
 
-/* =========================================================
-   STAT CARD
-========================================================= */
+                  <div
+                    key={article.id}
+                    className="p-4 border-b border-gray-200 last:border-0"
+                  >
 
-function StatCard({
-  title,
-  value,
-  icon,
-  description,
-  live = false,
-}) {
-  return (
-    <div className="bg-white border border-gray-200 p-4">
+                    <div className="flex gap-3">
 
-      <div className="flex items-start justify-between">
+                      {article.image_url ? (
+                        <img
+                          src={article.image_url}
+                          alt=""
+                          className="w-20 h-14 object-cover flex-none"
+                        />
+                      ) : (
+                        <div className="w-20 h-14 bg-[#172b4d] flex items-center justify-center text-[8px] text-white/50">
+                          PANORAMA
+                        </div>
+                      )}
 
-        <div>
+                      <div className="min-w-0 flex-1">
 
-          <div className="text-[9px] uppercase tracking-wider text-gray-400 font-bold">
-            {title}
-          </div>
+                        <div className="text-[9px] uppercase font-bold text-[#1D4E89]">
+                          {article.video_url
+                            ? '🎥 Video'
+                            : '📰 Xəbər'}
+                        </div>
 
-          <div className="text-2xl font-bold text-[#172b4d] mt-1">
-            {Number(value || 0).toLocaleString(
-              'az-AZ'
+                        <h3 className="text-xs font-semibold leading-snug mt-1 line-clamp-2">
+                          {article.title}
+                        </h3>
+
+                      </div>
+
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+
+                      <span className="text-[10px] text-gray-400">
+                        {article.views || 0} baxış
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          deleteArticle(
+                            article.id
+                          )
+                        }
+                        className="text-[10px] font-semibold text-red-500 hover:text-red-700"
+                      >
+                        Sil
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
             )}
-          </div>
 
-          <div className="text-[10px] text-gray-400 mt-1">
-            {description}
-          </div>
+          </aside>
 
         </div>
 
-        <div
-          className={`
-            w-9 h-9
-            flex items-center justify-center
-            text-sm
-            ${
-              live
-                ? 'bg-red-50 text-red-500'
-                : 'bg-[#f1f4f8] text-[#172b4d]'
-            }
-          `}
-        >
-          {icon}
-        </div>
-
       </div>
 
-    </div>
-  );
-}
-
-/* =========================================================
-   QUICK ACTION
-========================================================= */
-
-function QuickAction({
-  href,
-  icon,
-  title,
-}) {
-  return (
-    <Link
-      href={href}
-      className="border border-gray-200 p-3 hover:border-[#172b4d] hover:bg-[#f8f9fb] transition"
-    >
-
-      <div className="text-lg mb-2">
-        {icon}
-      </div>
-
-      <div className="text-xs font-semibold">
-        {title}
-      </div>
-
-    </Link>
+    </main>
   );
 }
