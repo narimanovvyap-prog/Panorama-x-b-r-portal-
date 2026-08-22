@@ -11,10 +11,11 @@ export default function Header() {
   const [q, setQ] = useState('');
   const [weather, setWeather] = useState(null);
   const [time, setTime] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // =========================
+  // =====================================================
   // CANLI SAAT
-  // =========================
+  // =====================================================
 
   useEffect(() => {
     function updateTime() {
@@ -37,9 +38,9 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  // =========================
-  // BAKI HAVA PROQNOZU
-  // =========================
+  // =====================================================
+  // BAKI HAVA
+  // =====================================================
 
   useEffect(() => {
     async function getWeather() {
@@ -58,7 +59,9 @@ export default function Header() {
         const data = await response.json();
 
         setWeather({
-          temperature: Math.round(data.current.temperature_2m),
+          temperature: Math.round(
+            data.current.temperature_2m
+          ),
           code: data.current.weather_code,
         });
       } catch (error) {
@@ -68,7 +71,6 @@ export default function Header() {
 
     getWeather();
 
-    // Hər 30 dəqiqədən bir yenilənir
     const interval = setInterval(
       getWeather,
       30 * 60 * 1000
@@ -77,9 +79,9 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  // =========================
+  // =====================================================
   // HAVA MƏLUMATI
-  // =========================
+  // =====================================================
 
   function getWeatherInfo(code) {
     if (code === 0) {
@@ -151,9 +153,9 @@ export default function Header() {
     };
   }
 
-  // =========================
+  // =====================================================
   // AXTARIŞ
-  // =========================
+  // =====================================================
 
   function handleSearch(e) {
     e.preventDefault();
@@ -162,6 +164,8 @@ export default function Header() {
       router.push(
         `/axtar?q=${encodeURIComponent(q.trim())}`
       );
+
+      setMenuOpen(false);
     }
   }
 
@@ -170,206 +174,44 @@ export default function Header() {
     : null;
 
   return (
-    <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
 
-      {/* ================= YUXARI HİSSƏ ================= */}
+      {/* =================================================
+          YUXARI İNFORMASİYA XƏTTİ
+      ================================================= */}
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      <div className="hidden lg:block bg-[#111827] text-white">
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4">
 
-          {/* ================= PANORAMA LOGO ================= */}
+          <div className="h-9 flex items-center justify-between text-[11px]">
 
-          <Link
-            href="/"
-            className="flex items-center gap-3 sm:gap-4 min-w-0 group"
-          >
+            <div className="flex items-center gap-5 text-gray-300">
 
-            {/* LOGO İŞARƏSİ */}
-
-            <div className="relative flex-none">
-
-              <svg
-                width="42"
-                height="42"
-                viewBox="0 0 48 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="transition-transform duration-300 group-hover:scale-105"
-              >
-
-                {/* Xarici dairə */}
-
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="21"
-                  stroke="#10151C"
-                  strokeWidth="2.5"
-                />
-
-                {/* İç dairə */}
-
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="16"
-                  stroke="#1D4E89"
-                  strokeWidth="1.5"
-                  opacity="0.35"
-                />
-
-                {/* PANORAMA dalğası */}
-
-                <path
-                  d="M10 27C14 27 15 20 19 20C23 20 24 28 28 28C32 28 34 20 38 20"
-                  stroke="#1D4E89"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-
-                {/* Kiçik nöqtə */}
-
-                <circle
-                  cx="38"
-                  cy="20"
-                  r="2"
-                  fill="#1D4E89"
-                />
-
-              </svg>
-
-            </div>
-
-            {/* LOGO YAZISI */}
-
-            <div className="min-w-0">
-
-              <div className="font-serif text-xl sm:text-2xl font-bold tracking-tight leading-none group-hover:text-blue transition-colors">
-                PANORAMA
-              </div>
-
-              <div className="text-[8px] sm:text-[10px] uppercase tracking-[0.22em] text-gray-500 mt-1">
-                Xəbər Portalı
-              </div>
-
-            </div>
-
-          </Link>
-
-          {/* ================= SAĞ TƏRƏF ================= */}
-
-          <div className="flex items-center gap-2 sm:gap-4">
-
-            {/* ================= HAVA ================= */}
-
-            <div className="hidden sm:flex items-center gap-2 border border-line bg-panel px-3 py-2 rounded-sm">
-
-              <span className="text-lg">
-                {weatherInfo
-                  ? weatherInfo.icon
-                  : '🌤️'}
+              <span>
+                PANORAMA XƏBƏR PORTALI
               </span>
 
-              <div className="leading-tight">
+              <span className="text-gray-600">
+                |
+              </span>
 
-                <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                  Bakı
-                </div>
-
-                <div className="text-sm font-bold">
-
-                  {weather
-                    ? `${weather.temperature}°C`
-                    : '--°C'}
-
-                </div>
-
-              </div>
+              <span>
+                Azərbaycandan və dünyadan ən son xəbərlər
+              </span>
 
             </div>
 
-            {/* ================= SAAT ================= */}
+            <div className="flex items-center gap-5">
 
-            <div className="hidden sm:block border-l border-line pl-3 sm:pl-4">
-
-              <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                Saat
-              </div>
-
-              <div className="font-mono text-sm sm:text-base font-bold">
-                {time || '--:--:--'}
-              </div>
-
-            </div>
-
-            {/* ================= DESKTOP AXTARIŞ ================= */}
-
-            <form
-              onSubmit={handleSearch}
-              className="hidden md:flex items-center border border-line rounded-sm overflow-hidden"
-            >
-
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Axtar..."
-                className="px-3 py-1.5 text-sm outline-none w-52 bg-bg"
-              />
-
-              <button
-                type="submit"
-                className="bg-ink text-white px-3 py-1.5 text-sm hover:bg-blue transition-colors"
-              >
-                Axtar
-              </button>
-
-            </form>
-
-          </div>
-
-        </div>
-
-        {/* ================= MOBİL HAVA + SAAT ================= */}
-
-        <div className="sm:hidden flex items-center justify-between mt-3 pt-3 border-t border-line">
-
-          {/* HAVA */}
-
-          <div className="flex items-center gap-2">
-
-            <span className="text-lg">
-              {weatherInfo
-                ? weatherInfo.icon
-                : '🌤️'}
-            </span>
-
-            <div>
-
-              <div className="text-[9px] uppercase tracking-wider text-gray-400">
+              <span>
                 Bakı
-              </div>
+              </span>
 
-              <div className="text-sm font-bold">
-                {weather
-                  ? `${weather.temperature}°C`
-                  : '--°C'}
-              </div>
+              <span className="text-gray-500">
+                {time || '--:--:--'}
+              </span>
 
-            </div>
-
-          </div>
-
-          {/* SAAT */}
-
-          <div className="text-right">
-
-            <div className="text-[9px] uppercase tracking-wider text-gray-400">
-              Saat
-            </div>
-
-            <div className="font-mono text-sm font-bold">
-              {time || '--:--:--'}
             </div>
 
           </div>
@@ -378,57 +220,389 @@ export default function Header() {
 
       </div>
 
-      {/* ================= CATEGORY MENU ================= */}
 
-      <nav className="bg-ink overflow-x-auto">
+      {/* =================================================
+          ƏSAS HEADER
+      ================================================= */}
 
-        <div className="max-w-6xl mx-auto px-2 sm:px-6 flex items-center">
+      <div className="bg-white">
 
-          <Link
-            href="/"
-            className="text-gray-300 hover:text-white text-xs sm:text-sm font-semibold px-3 py-3 whitespace-nowrap transition-colors"
-          >
-            Əsas səhifə
-          </Link>
+        <div className="max-w-7xl mx-auto px-4">
 
-          {CATEGORIES.map((c) => (
+          <div className="min-h-[92px] flex items-center justify-between gap-6">
+
+            {/* =================================================
+                LOGO
+            ================================================= */}
 
             <Link
-              key={c.slug}
-              href={`/${c.slug}`}
-              className="text-gray-300 hover:text-white text-xs sm:text-sm font-semibold px-3 py-3 whitespace-nowrap transition-colors"
+              href="/"
+              className="flex items-center gap-3 group flex-none"
+              onClick={() => setMenuOpen(false)}
             >
-              {c.name}
+
+              {/* LOGO İKONU */}
+
+              <div className="relative w-12 h-12">
+
+                <div className="absolute inset-0 rounded-full border-[3px] border-[#172b4d]" />
+
+                <div className="absolute inset-[6px] rounded-full border border-[#2563eb]" />
+
+                <svg
+                  viewBox="0 0 48 48"
+                  className="absolute inset-0 w-full h-full"
+                  fill="none"
+                >
+
+                  <path
+                    d="M9 27C13 27 15 19 19 19C23 19 25 29 29 29C33 29 35 20 39 20"
+                    stroke="#2563eb"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+
+                  <circle
+                    cx="39"
+                    cy="20"
+                    r="2"
+                    fill="#2563eb"
+                  />
+
+                </svg>
+
+              </div>
+
+
+              {/* LOGO YAZISI */}
+
+              <div>
+
+                <div className="text-[25px] md:text-[29px] font-black tracking-[-0.04em] text-[#111827] leading-none group-hover:text-[#2563eb] transition-colors">
+                  PANORAMA
+                </div>
+
+                <div className="text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-gray-400 mt-1">
+                  XƏBƏR PORTALI
+                </div>
+
+              </div>
+
             </Link>
 
-          ))}
+
+            {/* =================================================
+                ORTA BLOK
+            ================================================= */}
+
+            <div className="hidden md:flex flex-1 justify-center">
+
+              <div className="flex items-center gap-8">
+
+                {/* HAVA */}
+
+                <div className="flex items-center gap-3">
+
+                  <div className="text-2xl">
+                    {weatherInfo?.icon || '🌤️'}
+                  </div>
+
+                  <div>
+
+                    <div className="text-[9px] uppercase tracking-widest text-gray-400">
+                      Bakı
+                    </div>
+
+                    <div className="font-bold text-sm text-[#111827]">
+                      {weather
+                        ? `${weather.temperature}°C`
+                        : '--°C'}
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                <div className="h-9 w-px bg-gray-200" />
+
+
+                {/* SAAT */}
+
+                <div>
+
+                  <div className="text-[9px] uppercase tracking-widest text-gray-400">
+                    İndi
+                  </div>
+
+                  <div className="font-mono font-bold text-sm text-[#111827]">
+                    {time || '--:--:--'}
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* =================================================
+                SAĞ TƏRƏF
+            ================================================= */}
+
+            <div className="flex items-center gap-2">
+
+              {/* DESKTOP AXTARIŞ */}
+
+              <form
+                onSubmit={handleSearch}
+                className="hidden lg:flex items-center border border-gray-200 rounded-full overflow-hidden h-10"
+              >
+
+                <input
+                  value={q}
+                  onChange={(e) =>
+                    setQ(e.target.value)
+                  }
+                  placeholder="Xəbər axtar..."
+                  className="w-44 px-4 text-sm outline-none bg-white"
+                />
+
+                <button
+                  type="submit"
+                  aria-label="Axtar"
+                  className="w-10 h-10 flex items-center justify-center bg-[#172b4d] text-white hover:bg-[#2563eb] transition"
+                >
+
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+
+                    <circle
+                      cx="11"
+                      cy="11"
+                      r="7"
+                    />
+
+                    <path d="m20 20-4-4" />
+
+                  </svg>
+
+                </button>
+
+              </form>
+
+
+              {/* MOBİL MENYU */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setMenuOpen(!menuOpen)
+                }
+                className="lg:hidden w-10 h-10 border border-gray-200 flex items-center justify-center"
+                aria-label="Menyu"
+              >
+
+                <div className="space-y-1">
+
+                  <span className="block w-5 h-[2px] bg-[#172b4d]" />
+                  <span className="block w-5 h-[2px] bg-[#172b4d]" />
+                  <span className="block w-5 h-[2px] bg-[#172b4d]" />
+
+                </div>
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* =================================================
+          ƏSAS MENYU
+      ================================================= */}
+
+      <nav className="bg-[#172b4d]">
+
+        <div className="max-w-7xl mx-auto px-4">
+
+          <div className="hidden lg:flex items-center h-12">
+
+            <Link
+              href="/"
+              className="h-12 flex items-center px-4 text-white text-sm font-bold bg-[#2563eb] hover:bg-[#1d4ed8] transition"
+            >
+              Əsas səhifə
+            </Link>
+
+            {CATEGORIES.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/${category.slug}`}
+                className="h-12 flex items-center px-4 text-gray-200 text-sm font-semibold hover:bg-white/10 hover:text-white transition"
+              >
+                {category.name}
+              </Link>
+            ))}
+
+            <Link
+              href="/"
+              className="ml-auto text-gray-300 text-xs font-semibold hover:text-white transition"
+            >
+              Bütün xəbərlər →
+            </Link>
+
+          </div>
+
+
+          {/* TABLET / MOBİL */}
+
+          <div className="lg:hidden flex items-center h-11 overflow-x-auto">
+
+            <Link
+              href="/"
+              className="text-white text-xs font-bold px-3 whitespace-nowrap"
+            >
+              Əsas
+            </Link>
+
+            {CATEGORIES.slice(0, 5).map(
+              (category) => (
+                <Link
+                  key={category.slug}
+                  href={`/${category.slug}`}
+                  className="text-gray-300 text-xs font-semibold px-3 whitespace-nowrap"
+                >
+                  {category.name}
+                </Link>
+              )
+            )}
+
+          </div>
 
         </div>
 
       </nav>
 
-      {/* ================= MOBILE SEARCH ================= */}
 
-      <form
-        onSubmit={handleSearch}
-        className="md:hidden flex border-b border-line bg-white"
-      >
+      {/* =================================================
+          MOBİL MENYU
+      ================================================= */}
 
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Xəbər axtar..."
-          className="flex-1 min-w-0 px-4 py-3 text-sm outline-none"
-        />
+      {menuOpen && (
+        <div className="lg:hidden bg-white border-b border-gray-200 shadow-lg">
 
-        <button
-          type="submit"
-          className="bg-ink text-white px-4 text-sm font-semibold"
-        >
-          Axtar
-        </button>
+          <div className="max-w-7xl mx-auto px-4 py-4">
 
-      </form>
+            {/* AXTARIŞ */}
+
+            <form
+              onSubmit={handleSearch}
+              className="flex border border-gray-200 mb-4"
+            >
+
+              <input
+                value={q}
+                onChange={(e) =>
+                  setQ(e.target.value)
+                }
+                placeholder="Xəbər axtar..."
+                className="flex-1 min-w-0 px-4 py-3 text-sm outline-none"
+              />
+
+              <button
+                type="submit"
+                className="px-5 bg-[#172b4d] text-white text-sm font-semibold"
+              >
+                Axtar
+              </button>
+
+            </form>
+
+
+            {/* KATEQORİYALAR */}
+
+            <div className="grid grid-cols-2 gap-1">
+
+              <Link
+                href="/"
+                onClick={() => setMenuOpen(false)}
+                className="p-3 bg-gray-50 text-sm font-semibold text-[#172b4d]"
+              >
+                Əsas səhifə
+              </Link>
+
+              {CATEGORIES.map((category) => (
+                <Link
+                  key={category.slug}
+                  href={`/${category.slug}`}
+                  onClick={() =>
+                    setMenuOpen(false)
+                  }
+                  className="p-3 bg-gray-50 text-sm font-semibold text-[#172b4d]"
+                >
+                  {category.name}
+                </Link>
+              ))}
+
+            </div>
+
+
+            {/* MOBİL HAVA */}
+
+            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+
+              <div className="flex items-center gap-3">
+
+                <span className="text-xl">
+                  {weatherInfo?.icon || '🌤️'}
+                </span>
+
+                <div>
+
+                  <div className="text-[9px] uppercase tracking-widest text-gray-400">
+                    Bakı
+                  </div>
+
+                  <div className="font-bold text-sm">
+                    {weather
+                      ? `${weather.temperature}°C`
+                      : '--°C'}
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <div className="text-right">
+
+                <div className="text-[9px] uppercase tracking-widest text-gray-400">
+                  Saat
+                </div>
+
+                <div className="font-mono font-bold text-sm">
+                  {time || '--:--:--'}
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
     </header>
   );
