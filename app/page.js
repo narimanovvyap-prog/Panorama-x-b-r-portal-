@@ -10,7 +10,7 @@ async function getData() {
     .from('articles')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(40);
+    .limit(60);
 
   if (articlesError) {
     console.error('Xəbər xətası:', articlesError);
@@ -90,15 +90,36 @@ export default async function HomePage() {
 
   const sideNews = remaining.slice(0, 4);
 
-  const gündemNews = remaining.slice(4, 12);
+  const gündemNews = remaining
+    .filter((article) => !article.video_url)
+    .slice(0, 8);
 
-  const lowerNews = remaining.slice(12, 20);
+  const lowerNews = remaining
+    .filter((article) => !article.video_url)
+    .slice(8, 16);
+
+  /* ================================
+     VİDEO XƏBƏRLƏR
+  ================================= */
+
+  const videoNews = articles
+    .filter(
+      (article) =>
+        article.video_url &&
+        article.video_url.trim() !== ''
+    )
+    .slice(0, 6);
+
+  /* ================================
+     KATEQORİYALAR
+  ================================= */
 
   const politics = articles
     .filter(
       (article) =>
         article.category === 'siyaset' &&
-        article.id !== featured?.id
+        article.id !== featured?.id &&
+        !article.video_url
     )
     .slice(0, 4);
 
@@ -106,7 +127,8 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'iqtisadiyyat' &&
-        article.id !== featured?.id
+        article.id !== featured?.id &&
+        !article.video_url
     )
     .slice(0, 4);
 
@@ -114,7 +136,8 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'cemiyyet' &&
-        article.id !== featured?.id
+        article.id !== featured?.id &&
+        !article.video_url
     )
     .slice(0, 4);
 
@@ -122,7 +145,8 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'dunya' &&
-        article.id !== featured?.id
+        article.id !== featured?.id &&
+        !article.video_url
     )
     .slice(0, 4);
 
@@ -493,6 +517,16 @@ export default async function HomePage() {
       )}
 
       {/* ================================
+          VİDEO XƏBƏRLƏR
+      ================================= */}
+
+      {videoNews.length > 0 && (
+        <VideoSection
+          articles={videoNews}
+        />
+      )}
+
+      {/* ================================
           DİGƏR XƏBƏRLƏR
       ================================= */}
 
@@ -520,7 +554,7 @@ export default async function HomePage() {
       )}
 
       {/* ================================
-          FOTO / VİDEO
+          FOTO / VİDEO KEÇİDİ
       ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 py-8">
@@ -636,9 +670,165 @@ export default async function HomePage() {
   );
 }
 
-/* ================================
+
+/* =========================================================
+   VİDEO BÖLMƏSİ
+========================================================= */
+
+function VideoSection({ articles }) {
+  return (
+    <section className="bg-[#f7f8fa] border-y border-gray-200">
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* BAŞLIQ */}
+
+        <div className="flex items-center gap-4 mb-6">
+
+          <div>
+
+            <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
+              PANORAMA
+            </div>
+
+            <h2 className="text-2xl font-bold text-[#172b4d]">
+              Video xəbərlər
+            </h2>
+
+          </div>
+
+          <div className="h-[2px] flex-1 bg-[#172b4d]" />
+
+          <Link
+            href="/video"
+            className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors"
+          >
+            Hamısı →
+          </Link>
+
+        </div>
+
+
+        {/* VİDEOLAR */}
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {articles.map((article) => (
+
+            <div
+              key={article.id}
+              className="bg-white border border-gray-200 overflow-hidden group"
+            >
+
+              {/* VİDEO */}
+
+              <div className="relative bg-black aspect-video">
+
+                <video
+                  src={article.video_url}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+
+                {/* VIDEO NİŞANI */}
+
+                <div className="absolute top-3 left-3 pointer-events-none">
+
+                  <span className="bg-red-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
+                    ▶ Video
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              {/* MƏLUMAT */}
+
+              <div className="p-4">
+
+                <div className="flex items-center justify-between gap-3 mb-2">
+
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{
+                      color: categoryColor(
+                        article.category
+                      ),
+                    }}
+                  >
+                    {categoryName(
+                      article.category
+                    )}
+                  </span>
+
+                  {article.created_at && (
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(
+                        article.created_at
+                      ).toLocaleDateString(
+                        'az-AZ'
+                      )}
+                    </span>
+                  )}
+
+                </div>
+
+
+                <Link
+                  href={`/article/${article.slug}`}
+                >
+
+                  <h3 className="text-[17px] font-bold leading-[1.3] text-[#111827] line-clamp-3 hover:text-[#2563eb] transition-colors">
+                    {article.title}
+                  </h3>
+
+                </Link>
+
+
+                {article.excerpt && (
+                  <p className="mt-2 text-[13px] leading-relaxed text-gray-500 line-clamp-2">
+                    {article.excerpt}
+                  </p>
+                )}
+
+
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+
+                  <span className="text-[10px] text-gray-400">
+                    {article.source ||
+                      'PANORAMA Xəbər'}
+                  </span>
+
+                  <Link
+                    href={`/article/${article.slug}`}
+                    className="text-[10px] font-bold uppercase tracking-wider text-[#172b4d] hover:text-[#2563eb]"
+                  >
+                    Xəbəri oxu →
+                  </Link>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+    </section>
+  );
+}
+
+
+/* =========================================================
    BÖLMƏ BAŞLIĞI
-================================ */
+========================================================= */
 
 function SectionTitle({ title, href }) {
   return (
@@ -663,9 +853,10 @@ function SectionTitle({ title, href }) {
   );
 }
 
-/* ================================
+
+/* =========================================================
    KATEQORİYA BÖLMƏSİ
-================================ */
+========================================================= */
 
 function CategorySection({
   title,
