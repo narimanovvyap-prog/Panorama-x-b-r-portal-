@@ -8,60 +8,103 @@ export default function NewsTicker({ articles = [] }) {
   const items = [...articles, ...articles];
 
   return (
-    <div className="w-full bg-ink border-b border-white/10 overflow-hidden">
-      <div className="max-w-6xl mx-auto flex items-stretch">
+    <section className="w-full bg-white border-b border-slate-200 shadow-[0_1px_8px_rgba(15,42,67,0.05)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
-        {/* SON XƏBƏRLƏR ETİKETİ */}
-        <div className="relative z-10 flex-none flex items-center gap-2 bg-crimson text-white px-4 sm:px-5 py-2.5">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60"></span>
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white"></span>
-          </span>
+        <div className="flex items-center h-[52px] overflow-hidden">
 
-          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] whitespace-nowrap">
-            Son xəbərlər
-          </span>
-        </div>
+          {/* SOL HİSSƏ */}
+          <div className="flex items-center gap-3 pr-5 sm:pr-7 border-r border-slate-200 flex-none">
 
-        {/* XƏBƏR AXINI */}
-        <div className="relative flex-1 overflow-hidden">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-3 h-3 rounded-full bg-blue-200 animate-ping" />
 
-          {/* Sol tərəfdə yumşaq keçid */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-ink to-transparent z-[5] pointer-events-none" />
+              <span className="relative w-2.5 h-2.5 rounded-full bg-[#1D4E89]" />
+            </div>
 
-          <div className="news-ticker flex items-center whitespace-nowrap h-full">
+            <div className="leading-none">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#102A43]">
+                CANLI
+              </div>
 
-            {items.map((article, index) => (
-              <Link
-                key={`${article.id}-${index}`}
-                href={`/article/${article.slug}`}
-                className="group inline-flex items-center gap-3 px-5 sm:px-6 py-2.5 text-[12px] sm:text-[13px] font-medium text-gray-300 hover:text-white transition-colors"
-              >
-
-                {/* Xəbər nöqtəsi */}
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500 group-hover:bg-crimson transition-colors flex-none" />
-
-                {/* Başlıq */}
-                <span>
-                  {article.title}
-                </span>
-
-                {/* Ayırıcı */}
-                <span className="text-gray-600 mx-1">
-                  /
-                </span>
-
-              </Link>
-            ))}
+              <div className="text-[9px] text-slate-400 mt-1 whitespace-nowrap">
+                Son xəbərlər
+              </div>
+            </div>
 
           </div>
 
-          {/* Sağ tərəfdə yumşaq keçid */}
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-ink to-transparent z-[5] pointer-events-none" />
+          {/* XƏBƏR AXINI */}
+          <div className="relative flex-1 overflow-hidden h-full">
+
+            {/* Sol gradient */}
+            <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+
+            {/* Sağ gradient */}
+            <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+            <div className="news-ticker flex items-center h-full whitespace-nowrap">
+
+              {items.map((article, index) => (
+                <Link
+                  key={`${article.id}-${index}`}
+                  href={`/article/${article.slug}`}
+                  className="
+                    group
+                    flex
+                    items-center
+                    gap-3
+                    px-5
+                    sm:px-7
+                    h-full
+                    text-[13px]
+                    font-medium
+                    text-[#263A4D]
+                    hover:text-[#1D4E89]
+                    transition-colors
+                  "
+                >
+
+                  {/* Kiçik xəbər işarəsi */}
+                  <span className="
+                    flex-none
+                    w-1.5
+                    h-1.5
+                    rounded-full
+                    bg-slate-300
+                    group-hover:bg-[#1D4E89]
+                    transition-colors
+                  " />
+
+                  {/* Xəbər başlığı */}
+                  <span className="max-w-[420px] truncate">
+                    {article.title}
+                  </span>
+
+                  {/* Ayırıcı */}
+                  <span className="text-slate-300 text-[15px]">
+                    •
+                  </span>
+
+                </Link>
+              ))}
+
+            </div>
+
+          </div>
+
+          {/* SAĞDA XƏBƏRLƏR SAYI */}
+          <div className="hidden lg:flex items-center pl-5 border-l border-slate-200 flex-none">
+
+            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+              Gündəlik xəbər axını
+            </span>
+
+          </div>
 
         </div>
 
       </div>
-    </div>
+    </section>
   );
 }
