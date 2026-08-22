@@ -14,6 +14,7 @@ create table if not exists articles (
   category text not null,
   source text,
   image_url text,
+  video_url text,
   is_featured boolean not null default false,
   views integer not null default 0,
   created_at timestamptz not null default now(),
@@ -23,6 +24,9 @@ create table if not exists articles (
 create index if not exists articles_category_idx on articles (category);
 create index if not exists articles_created_idx on articles (created_at desc);
 create index if not exists articles_views_idx on articles (views desc);
+
+-- Mövcud layihələrdə cədvəl artıq yaradılıbsa video sütununu əlavə et.
+alter table articles add column if not exists video_url text;
 
 -- 2) Axtarış üçün tam mətn indeksi
 create index if not exists articles_search_idx on articles
@@ -78,7 +82,14 @@ create policy "Authenticated delete" on articles
 -- yaradıldıqdan sonra aşağıdakı policy-ləri buradan işə sala bilərsən:
 -- ============================================================
 
--- Bucket adı: xeber-sekiller (public olaraq yaradılmalıdır)
+-- Bucket-ları public yarat. Mövcud bucket-lar dəyişdirilmir.
+insert into storage.buckets (id, name, public)
+values
+  ('xeber-sekiller', 'xeber-sekiller', true),
+  ('xeber-videolari', 'xeber-videolari', true)
+on conflict (id) do nothing;
+
+-- Bucket adları: xeber-sekiller və xeber-videolari
 
 drop policy if exists "Public image read" on storage.objects;
 create policy "Public image read" on storage.objects
@@ -91,3 +102,15 @@ create policy "Authenticated image upload" on storage.objects
 drop policy if exists "Authenticated image delete" on storage.objects;
 create policy "Authenticated image delete" on storage.objects
   for delete to authenticated using (bucket_id = 'xeber-sekiller');
+
+drop policy if exists "Public video read" on storage.objects;
+create policy "Public video read" on storage.objects
+  for select using (bucket_id = 'xeber-videolari');
+
+drop policy if exists "Authenticated video upload" on storage.objects;
+create policy "Authenticated video upload" on storage.objects
+  for insert to authenticated with check (bucket_id = 'xeber-videolari');
+
+drop policy if exists "Authenticated video delete" on storage.objects;
+create policy "Authenticated video delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'xeber-videolari');

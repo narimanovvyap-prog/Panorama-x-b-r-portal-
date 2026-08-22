@@ -23,12 +23,14 @@ Aşağıdakı addımları ardıcıl et. Hər addımda ekran görüntüsü gönd�
 
 Bu, `articles` cədvəlini, təhlükəsizlik qaydalarını (RLS) və baxış sayğacı funksiyasını yaradır.
 
-## 3-CÜ ADDIM — Şəkil üçün Storage bucket yarat
+## 3-CÜ ADDIM — Media üçün Storage bucket-ları yarat
 
 1. Sol menyudan **Storage** bölməsinə keç.
 2. **New bucket** düyməsinə bas.
-3. Ad: `xeber-sekiller` (məhz bu adla — kodda belə istifadə olunur).
-4. **Public bucket** seçimini AÇIQ et (toggle-ı yaşıl et).
+3. Aşağıdakı iki bucket-ı yarat (məhz bu adlarla):
+   - `xeber-sekiller`
+   - `xeber-videolari`
+4. Hər ikisi üçün **Public bucket** seçimini AÇIQ et (toggle-ı yaşıl et).
 5. **Create bucket** düyməsinə bas.
 
 (Bucket policy-ləri artıq `supabase-schema.sql` faylında var, avtomatik işə düşür.)
@@ -81,8 +83,8 @@ Sonra brauzerdə `http://localhost:3000` aç. `/admin` ünvanından daxil ol və
 
 ## Sayt necə işləyir?
 
-- **Admin panel** (`/admin`): daxil ol, xəbər əlavə et/redaktə et/sil, şəkil yüklə, "Baş xəbər" işarələ.
-- **Əsas səhifə**: baş xəbər + son xəbərlər + "Ən çox oxunanlar" (baxış sayına görə avtomatik).
+- **Admin panel** (`/admin`): daxil ol, xəbər əlavə et/redaktə et/sil, şəkil və ya video yüklə, "Baş xəbər" işarələ.
+- **Əsas səhifə**: baş xəbər + son xəbərlər + "Ən çox oxunanlar". Videolu xəbər əsas bölmədə idarəetmə düymələri ilə görünür.
 - **Kateqoriya səhifələri** (`/siyaset`, `/iqtisadiyyat` və s.): həmin kateqoriyadakı bütün xəbərlər.
 - **Xəbər səhifəsi** (`/article/xeber-slug`): tam mətn, şəkil, baxış sayğacı avtomatik artır, "bunları da oxu" bölməsi.
 - **Axtarış** (`/axtar?q=...`): başlıq, qısa təsvir və mətn üzrə axtarır.
