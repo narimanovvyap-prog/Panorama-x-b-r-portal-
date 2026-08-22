@@ -4,10 +4,145 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #FAFAF7;
-  color: #10151C;
+
+/* =====================================================
+   PANORAMA — GLOBAL
+===================================================== */
+
+:root {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --ink: #0b1220;
+  --ink2: #111827;
+  --line: #e5e7eb;
+  --blue: #2563eb;
+  --muted: #6b7280;
 }
+
+
+* {
+  box-sizing: border-box;
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+body {
+  margin: 0;
+  padding: 0;
+
+  background: var(--bg);
+  color: var(--ink);
+
+  font-family: 'Inter', sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+
+/* =====================================================
+   SEÇİM
+===================================================== */
+
+::selection {
+  background: #2563eb;
+  color: white;
+}
+
+
+/* =====================================================
+   LINK
+===================================================== */
+
+a {
+  text-decoration: none;
+}
+
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* =====================================================
+   BAŞLIQLAR
+===================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Source Serif 4', serif;
+}
+
+
+/* =====================================================
+   KOD / TEXNİK YAZILAR
+===================================================== */
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+
+/* =====================================================
+   XƏBƏR MƏTNİ
+===================================================== */
+
+article {
+  color: #1f2937;
+}
+
+
+article p {
+  margin-bottom: 1.25rem;
+}
+
+
+article.prose p {
+  margin-bottom: 1.1em;
+  line-height: 1.85;
+}
+
+
+/* =====================================================
+   MƏTN SƏTRLƏRİ
+===================================================== */
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -16,6 +151,7 @@ body {
   overflow: hidden;
 }
 
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -23,7 +159,211 @@ body {
   overflow: hidden;
 }
 
-article.prose p {
-  margin-bottom: 1.1em;
-  line-height: 1.75;
+
+/* =====================================================
+   ŞƏKİLLƏR
+===================================================== */
+
+img {
+  max-width: 100%;
+}
+
+
+img {
+  user-select: none;
+}
+
+
+/* =====================================================
+   PANORAMA PANEL
+===================================================== */
+
+.bg-panel {
+  background-color: var(--panel);
+}
+
+
+.bg-bg {
+  background-color: var(--bg);
+}
+
+
+.bg-ink {
+  background-color: var(--ink);
+}
+
+
+.bg-ink2 {
+  background-color: var(--ink2);
+}
+
+
+.text-blue {
+  color: var(--blue);
+}
+
+
+.border-line {
+  border-color: var(--line);
+}
+
+
+/* =====================================================
+   XƏBƏR KARTLARI
+===================================================== */
+
+.news-card {
+  background: white;
+  border: 1px solid var(--line);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+
+.news-card:hover {
+  transform: translateY(-3px);
+  border-color: #d1d5db;
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+
+/* =====================================================
+   ŞƏKİL HOVER
+===================================================== */
+
+.image-hover {
+  overflow: hidden;
+}
+
+
+.image-hover img {
+  transition: transform 0.5s ease;
+}
+
+
+.image-hover:hover img {
+  transform: scale(1.04);
+}
+
+
+/* =====================================================
+   BUTTON
+===================================================== */
+
+button {
+  font-family: 'Inter', sans-serif;
+}
+
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+input,
+textarea,
+select {
+  font-family: 'Inter', sans-serif;
+}
+
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
+
+/* =====================================================
+   FOKUS
+===================================================== */
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+
+/* =====================================================
+   MOBİL
+===================================================== */
+
+@media (max-width: 640px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  h1 {
+    line-height: 1.15;
+  }
+
+  h2 {
+    line-height: 1.2;
+  }
+
+}
+
+
+/* =====================================================
+   ANİMASİYA
+===================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out;
+}
+
+
+/* =====================================================
+   TƏCİLİ XƏBƏR
+===================================================== */
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+
+.breaking-dot {
+  animation: pulseDot 1.2s infinite;
+}
+
+
+/* =====================================================
+   PRINT
+===================================================== */
+
+@media print {
+
+  header,
+  footer,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
 }
