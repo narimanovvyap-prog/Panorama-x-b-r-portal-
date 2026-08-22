@@ -88,10 +88,6 @@ export default async function HomePage() {
   const homepageAd =
     advertisements?.[0] || null;
 
-  /*
-   * Əsas səhifə üçün xəbərləri bölürük
-   */
-
   const sideNews = remaining.slice(0, 4);
 
   const gündemNews = remaining.slice(4, 12);
@@ -133,9 +129,9 @@ export default async function HomePage() {
   return (
     <main className="bg-white">
 
-      {/* =====================================================
+      {/* ================================
           BAŞ XƏBƏR
-      ===================================================== */}
+      ================================= */}
 
       {featured && (
         <section className="max-w-7xl mx-auto px-4 pt-6">
@@ -154,7 +150,7 @@ export default async function HomePage() {
                 <img
                   src={featured.image_url}
                   alt={featured.title}
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-[#172b4d]">
@@ -249,7 +245,7 @@ export default async function HomePage() {
                           <img
                             src={article.image_url}
                             alt={article.title}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
@@ -298,9 +294,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* =====================================================
+      {/* ================================
           REKLAM
-      ===================================================== */}
+      ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 py-6">
 
@@ -340,9 +336,9 @@ export default async function HomePage() {
 
       </section>
 
-      {/* =====================================================
+      {/* ================================
           GÜNDƏM
-      ===================================================== */}
+      ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 py-7">
 
@@ -448,9 +444,9 @@ export default async function HomePage() {
 
       </section>
 
-      {/* =====================================================
+      {/* ================================
           SİYASƏT
-      ===================================================== */}
+      ================================= */}
 
       {politics.length > 0 && (
         <CategorySection
@@ -460,9 +456,9 @@ export default async function HomePage() {
         />
       )}
 
-      {/* =====================================================
+      {/* ================================
           İQTİSADİYYAT
-      ===================================================== */}
+      ================================= */}
 
       {economy.length > 0 && (
         <CategorySection
@@ -472,9 +468,9 @@ export default async function HomePage() {
         />
       )}
 
-      {/* =====================================================
+      {/* ================================
           CƏMİYYƏT
-      ===================================================== */}
+      ================================= */}
 
       {society.length > 0 && (
         <CategorySection
@@ -484,9 +480,9 @@ export default async function HomePage() {
         />
       )}
 
-      {/* =====================================================
+      {/* ================================
           DÜNYA
-      ===================================================== */}
+      ================================= */}
 
       {world.length > 0 && (
         <CategorySection
@@ -496,9 +492,9 @@ export default async function HomePage() {
         />
       )}
 
-      {/* =====================================================
+      {/* ================================
           DİGƏR XƏBƏRLƏR
-      ===================================================== */}
+      ================================= */}
 
       {lowerNews.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-8">
@@ -523,9 +519,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* =====================================================
+      {/* ================================
           FOTO / VİDEO
-      ===================================================== */}
+      ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 py-8">
 
@@ -556,7 +552,7 @@ export default async function HomePage() {
               </p>
 
               <span className="inline-block mt-5 text-xs font-bold text-white">
-                Bax → 
+                Bax →
               </span>
 
             </div>
@@ -598,9 +594,9 @@ export default async function HomePage() {
 
       </section>
 
-      {/* =====================================================
+      {/* ================================
           ƏMƏKDAŞLIQ
-      ===================================================== */}
+      ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 pb-10">
 
@@ -640,9 +636,9 @@ export default async function HomePage() {
   );
 }
 
-/* =========================================================
+/* ================================
    BÖLMƏ BAŞLIĞI
-========================================================= */
+================================ */
 
 function SectionTitle({ title, href }) {
   return (
@@ -667,9 +663,9 @@ function SectionTitle({ title, href }) {
   );
 }
 
-/* =========================================================
+/* ================================
    KATEQORİYA BÖLMƏSİ
-========================================================= */
+================================ */
 
 function CategorySection({
   title,
