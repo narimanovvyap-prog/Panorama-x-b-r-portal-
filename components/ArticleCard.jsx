@@ -23,6 +23,11 @@ export default function ArticleCard({ article }) {
       )
     : '';
 
+  const isVideo =
+    !!article.video_url &&
+    typeof article.video_url === 'string' &&
+    article.video_url.trim() !== '';
+
   return (
     <Link
       href={`/article/${article.slug}`}
@@ -31,12 +36,72 @@ export default function ArticleCard({ article }) {
       <article className="h-full bg-white border border-gray-200 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
 
         {/* =================================================
-            ŞƏKİL
+            MEDIA — ŞƏKİL / VİDEO
         ================================================= */}
 
         <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
 
-          {article.image_url ? (
+          {/* =================================================
+              VİDEO
+          ================================================= */}
+
+          {isVideo ? (
+            <>
+              <video
+                src={article.video_url}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                preload="metadata"
+                poster={
+                  article.image_url
+                    ? article.image_url
+                    : undefined
+                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              />
+
+              {/* VİDEO ETİKETİ */}
+
+              <div className="absolute top-3 left-3 pointer-events-none">
+                <span className="inline-flex items-center gap-1.5 bg-black/75 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
+                  <span className="text-xs">
+                    ▶
+                  </span>
+
+                  Video
+                </span>
+              </div>
+
+              {/* TƏCİLİ */}
+
+              {article.is_breaking && (
+                <div className="absolute top-3 right-3 pointer-events-none">
+                  <span className="inline-flex items-center gap-1 bg-red-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    Təcili
+                  </span>
+                </div>
+              )}
+
+              {/* BAXIŞ */}
+
+              {typeof article.views === 'number' && (
+                <div className="absolute bottom-3 right-3 pointer-events-none">
+                  <span className="bg-black/60 text-white px-2 py-1 text-[10px] backdrop-blur-sm">
+                    {article.views} baxış
+                  </span>
+                </div>
+              )}
+            </>
+          ) : article.image_url ? (
+            /* =================================================
+                ŞƏKİL
+            ================================================= */
+
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -50,9 +115,13 @@ export default function ArticleCard({ article }) {
 
               {/* ŞƏKİL ÜZƏRİNDƏ TƏBƏQƏ */}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-70 pointer-events-none" />
             </>
           ) : (
+            /* =================================================
+                ŞƏKİL YOXDUR
+            ================================================= */
+
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
               <div className="text-center">
                 <div className="text-3xl mb-1">
@@ -66,24 +135,25 @@ export default function ArticleCard({ article }) {
             </div>
           )}
 
-          {/* BREAKING */}
+          {/* =================================================
+              BREAKING — ADİ XƏBƏR
+          ================================================= */}
 
-          {article.is_breaking && (
-            <div className="absolute top-3 left-3">
-
+          {!isVideo && article.is_breaking && (
+            <div className="absolute top-3 left-3 pointer-events-none">
               <span className="inline-flex items-center gap-1 bg-red-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 Təcili
               </span>
-
             </div>
           )}
 
-          {/* KATEQORİYA */}
+          {/* =================================================
+              KATEQORİYA — ADİ XƏBƏR
+          ================================================= */}
 
-          {!article.is_breaking && (
-            <div className="absolute top-3 left-3">
-
+          {!isVideo && !article.is_breaking && (
+            <div className="absolute top-3 left-3 pointer-events-none">
               <span
                 className="inline-block bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
                 style={{
@@ -94,24 +164,10 @@ export default function ArticleCard({ article }) {
               >
                 {categoryName(article.category)}
               </span>
-
-            </div>
-          )}
-
-          {/* BAXIŞ */}
-
-          {typeof article.views === 'number' && (
-            <div className="absolute bottom-3 right-3">
-
-              <span className="bg-black/60 text-white px-2 py-1 text-[10px] backdrop-blur-sm">
-                {article.views} baxış
-              </span>
-
             </div>
           )}
 
         </div>
-
 
         {/* =================================================
             MƏZMUN
@@ -142,15 +198,17 @@ export default function ArticleCard({ article }) {
 
           </div>
 
-
-          {/* BAŞLIQ */}
+          {/* =================================================
+              BAŞLIQ
+          ================================================= */}
 
           <h2 className="text-[17px] md:text-[18px] font-bold leading-[1.3] text-[#111827] line-clamp-3 group-hover:text-[#2563eb] transition-colors">
             {article.title}
           </h2>
 
-
-          {/* AÇIQLAMA */}
+          {/* =================================================
+              AÇIQLAMA
+          ================================================= */}
 
           {article.excerpt && (
             <p className="mt-2.5 text-[13px] leading-relaxed text-gray-500 line-clamp-2">
@@ -158,8 +216,9 @@ export default function ArticleCard({ article }) {
             </p>
           )}
 
-
-          {/* ALT HİSSƏ */}
+          {/* =================================================
+              ALT HİSSƏ
+          ================================================= */}
 
           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
 
@@ -187,11 +246,10 @@ export default function ArticleCard({ article }) {
 
             </div>
 
-
             {/* ƏTRAFLI OXU */}
 
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#172b4d] group-hover:text-[#2563eb] transition-colors">
-              Oxu →
+              {isVideo ? 'Videoya bax →' : 'Oxu →'}
             </span>
 
           </div>
