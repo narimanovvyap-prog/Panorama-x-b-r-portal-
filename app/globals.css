@@ -4,10 +4,20 @@
 @tailwind components;
 @tailwind utilities;
 
+
+/* =========================================
+   ƏSAS
+   ========================================= */
+
 body {
   background-color: #FAFAF7;
   color: #10151C;
 }
+
+
+/* =========================================
+   MƏTN SƏTİRLƏRİ
+   ========================================= */
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -28,7 +38,11 @@ article.prose p {
   line-height: 1.75;
 }
 
-/* XƏBƏR LENTİ */
+
+/* =========================================
+   XƏBƏR LENTİ
+   ========================================= */
+
 @keyframes ticker {
   from {
     transform: translateX(0);
@@ -48,9 +62,179 @@ article.prose p {
   animation-play-state: paused;
 }
 
-/* MOBİL */
+
+/* Mobil */
 @media (max-width: 640px) {
   .news-ticker {
     animation-duration: 20s;
+  }
+}
+
+
+/* =========================================
+   SƏHİFƏ AÇILIŞ ANİMASİYASI
+   ========================================= */
+
+@keyframes panoramaPageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main {
+  animation: panoramaPageIn 0.6s ease-out;
+}
+
+
+/* =========================================
+   XƏBƏR KARTLARI
+   ========================================= */
+
+.group {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.group:hover {
+  transform: translateY(-3px);
+}
+
+
+/* =========================================
+   ŞƏKİL HƏRƏKƏTLİLİYİ
+   ========================================= */
+
+.group img {
+  transition:
+    transform 0.5s ease,
+    filter 0.5s ease;
+}
+
+.group:hover img {
+  transform: scale(1.04);
+  filter: brightness(1.04);
+}
+
+
+/* =========================================
+   BAŞ XƏBƏR
+   ========================================= */
+
+.group.relative {
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.group.relative:hover {
+  transform: translateY(-2px);
+}
+
+.group.relative:hover img {
+  transform: scale(1.06);
+}
+
+
+/* =========================================
+   BAŞLIQLAR
+   ========================================= */
+
+.group h2,
+.group h3,
+.group h4 {
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.group:hover h2,
+.group:hover h3,
+.group:hover h4 {
+  transform: translateX(2px);
+}
+
+
+/* =========================================
+   ƏN ÇOX OXUNANLAR
+   ========================================= */
+
+aside a {
+  transition:
+    transform 0.25s ease,
+    background-color 0.25s ease;
+}
+
+aside a:hover {
+  transform: translateX(4px);
+  background-color: #f8fafc;
+}
+
+
+/* =========================================
+   BÜTÜN LİNKLƏR
+   ========================================= */
+
+a {
+  transition:
+    color 0.25s ease,
+    opacity 0.25s ease;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* =========================================
+   BLOKLAR
+   ========================================= */
+
+section > div {
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+
+/* =========================================
+   MOBİL
+   ========================================= */
+
+@media (max-width: 640px) {
+
+  .group:hover {
+    transform: none;
+  }
+
+  .group.relative:hover {
+    transform: none;
+  }
+
+  aside a:hover {
+    transform: none;
+  }
+}
+
+
+/* =========================================
+   ANİMASİYANI AZALTMA REJİMİ
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
