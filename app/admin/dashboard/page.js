@@ -1,957 +1,1403 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Link from 'next/link';
-import ArticleCard from '@/components/ArticleCard';
-import { categoryName, categoryColor } from '@/lib/categories';
 
-export const revalidate = 0;
+const CATEGORIES = [
+  { value: 'siyaset', label: 'Siyasət' },
+  { value: 'iqtisadiyyat', label: 'İqtisadiyyat' },
+  { value: 'cemiyyet', label: 'Cəmiyyət' },
+  { value: 'dunya', label: 'Dünya' },
+  { value: 'idman', label: 'İdman' },
+  { value: 'medeniyyet', label: 'Mədəniyyət' },
+  { value: 'texnologiya', label: 'Texnologiya' },
+  { value: 'hadise', label: 'Hadisə' },
+];
 
-/* =========================================================
-   DATA
-========================================================= */
+const emptyForm = {
+  id: null,
+  title: '',
+  slug: '',
+  excerpt: '',
+  content: '',
+  category: 'siyaset',
+  source: '',
+  image_url: '',
+  video_url: '',
+  is_featured: false,
+};
 
-async function getData() {
-
-  // YALNIZ ADİ XƏBƏRLƏR
-  const { data: articles, error: articlesError } =
-    await supabase
-      .from('articles')
-      .select('*')
-      .or('video_url.is.null,video_url.eq.')
-      .order('created_at', {
-        ascending: false,
-      })
-      .limit(40);
-
-  if (articlesError) {
-    console.error(
-      'Xəbər xətası:',
-      articlesError
-    );
-  }
-
-  // YALNIZ ADİ XƏBƏRLƏRDƏN BAŞ XƏBƏR
-  const { data: featured } =
-    await supabase
-      .from('articles')
-      .select('*')
-      .or('video_url.is.null,video_url.eq.')
-      .eq('is_featured', true)
-      .order('created_at', {
-        ascending: false,
-      })
-      .limit(1);
-
-  // ƏN ÇOX OXUNANLARDA DA VİDEOLAR OLMASIN
-  const { data: mostRead } =
-    await supabase
-      .from('articles')
-      .select(
-        'id, title, slug, views, image_url, category, created_at'
-      )
-      .or('video_url.is.null,video_url.eq.')
-      .order('views', {
-        ascending: false,
-      })
-      .limit(6);
-
-  // VİDEO XƏBƏRLƏR
-  const { data: videoArticles, error: videoError } =
-    await supabase
-      .from('articles')
-      .select('*')
-      .not('video_url', 'is', null)
-      .neq('video_url', '')
-      .order('created_at', {
-        ascending: false,
-      })
-      .limit(6);
-
-  if (videoError) {
-    console.error(
-      'Video xətası:',
-      videoError
-    );
-  }
-
-  // REKLAMLAR
-  const {
-    data: advertisements,
-    error: adsError,
-  } = await supabase
-    .from('advertisements')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', {
-      ascending: false,
-    });
-
-  if (adsError) {
-    console.error(
-      'Reklam xətası:',
-      adsError
-    );
-  }
-
-  const now = new Date();
-
-  const activeAdvertisements =
-    (advertisements || []).filter((ad) => {
-
-      const startOk =
-        !ad.start_date ||
-        new Date(ad.start_date) <= now;
-
-      const endOk =
-        !ad.end_date ||
-        new Date(ad.end_date) >= now;
-
-      const positionOk =
-        ad.position === 'homepage' ||
-        ad.position === 'both';
-
-      return (
-        startOk &&
-        endOk &&
-        positionOk
-      );
-    });
-
-  return {
-    articles: articles || [],
-
-    featured:
-      featured?.[0] ||
-      articles?.[0] ||
-      null,
-
-    mostRead:
-      mostRead || [],
-
-    videoArticles:
-      videoArticles || [],
-
-    advertisements:
-      activeAdvertisements,
-  };
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/ə/g, 'e')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ü/g, 'u')
+    .replace(/ğ/g, 'g')
+    .replace(/ş/g, 's')
+    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
 }
 
-/* =========================================================
-   HOME
-========================================================= */
+function formatDate(date) {
+  if (!date) return '-';
 
-export default async function HomePage() {
+  return new Date(date).toLocaleString('az-AZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
-  const {
-    articles,
-    featured,
-    mostRead,
-    videoArticles,
-    advertisements,
-  } = await getData();
+export default function AdminDashboard() {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  /*
-   * Artıq articles siyahısında yalnız
-   * adi xəbərlər var.
-   */
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
-  const remaining =
-    articles.filter(
-      (article) =>
-        article.id !== featured?.id
+  const [showEditor, setShowEditor] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const [activeMenu, setActiveMenu] = useState('dashboard');
+
+  useEffect(() => {
+    loadArticles();
+  }, []);
+
+  async function loadArticles() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', {
+        ascending: false,
+      });
+
+    if (error) {
+      console.error(error);
+      setError('Xəbərləri yükləmək mümkün olmadı.');
+    } else {
+      setArticles(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  function openNewArticle() {
+    setForm(emptyForm);
+    setMessage('');
+    setError('');
+    setShowEditor(true);
+  }
+
+  function openEditArticle(article) {
+    setForm({
+      id: article.id,
+      title: article.title || '',
+      slug: article.slug || '',
+      excerpt: article.excerpt || '',
+      content: article.content || '',
+      category: article.category || 'siyaset',
+      source: article.source || '',
+      image_url: article.image_url || '',
+      video_url: article.video_url || '',
+      is_featured: article.is_featured || false,
+    });
+
+    setMessage('');
+    setError('');
+    setShowEditor(true);
+  }
+
+  function updateForm(field, value) {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  }
+
+  function handleTitleChange(value) {
+    setForm((prev) => ({
+      ...prev,
+      title: value,
+      slug: prev.id ? prev.slug : slugify(value),
+    }));
+  }
+
+  async function uploadFile(file, bucket) {
+    if (!file) return null;
+
+    const extension =
+      file.name.split('.').pop() || 'file';
+
+    const fileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${extension}`;
+
+    const path = `articles/${fileName}`;
+
+    const { error: uploadError } =
+      await supabase.storage
+        .from(bucket)
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+    if (uploadError) {
+      console.error(uploadError);
+      throw new Error(
+        `Fayl yüklənmədi: ${uploadError.message}`
+      );
+    }
+
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
+
+    return data.publicUrl;
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setUploadingImage(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const url = await uploadFile(
+        file,
+        'images'
+      );
+
+      updateForm('image_url', url);
+      setMessage('Şəkil uğurla yükləndi.');
+    } catch (err) {
+      setError(err.message);
+    }
+
+    setUploadingImage(false);
+  }
+
+  async function handleVideoUpload(e) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setUploadingVideo(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const url = await uploadFile(
+        file,
+        'videos'
+      );
+
+      updateForm('video_url', url);
+      setMessage('Video uğurla yükləndi.');
+    } catch (err) {
+      setError(err.message);
+    }
+
+    setUploadingVideo(false);
+  }
+
+  async function saveArticle(e) {
+    e.preventDefault();
+
+    setSaving(true);
+    setError('');
+    setMessage('');
+
+    if (!form.title.trim()) {
+      setError('Xəbərin başlığını yaz.');
+      setSaving(false);
+      return;
+    }
+
+    const payload = {
+      title: form.title.trim(),
+      slug:
+        form.slug.trim() ||
+        slugify(form.title),
+      excerpt: form.excerpt.trim(),
+      content: form.content.trim(),
+      category: form.category,
+      source: form.source.trim(),
+      image_url: form.image_url.trim(),
+      video_url: form.video_url.trim(),
+      is_featured: form.is_featured,
+    };
+
+    try {
+      if (form.is_featured) {
+        await supabase
+          .from('articles')
+          .update({
+            is_featured: false,
+          })
+          .eq('is_featured', true);
+      }
+
+      if (form.id) {
+        const { error } = await supabase
+          .from('articles')
+          .update(payload)
+          .eq('id', form.id);
+
+        if (error) throw error;
+
+        setMessage(
+          'Xəbər uğurla yeniləndi.'
+        );
+      } else {
+        const { error } = await supabase
+          .from('articles')
+          .insert([payload]);
+
+        if (error) throw error;
+
+        setMessage(
+          'Xəbər uğurla əlavə edildi.'
+        );
+      }
+
+      await loadArticles();
+
+      setTimeout(() => {
+        setShowEditor(false);
+        setForm(emptyForm);
+        setMessage('');
+      }, 700);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err.message ||
+          'Xəbəri yadda saxlamaq mümkün olmadı.'
+      );
+    }
+
+    setSaving(false);
+  }
+
+  async function deleteArticle(id) {
+    const ok = window.confirm(
+      'Bu xəbəri silmək istədiyinə əminsən?'
     );
 
-  const homepageAd =
-    advertisements?.[0] || null;
+    if (!ok) return;
 
-  /* ƏSAS XƏBƏR YANINDA */
-  const sideNews =
-    remaining.slice(0, 4);
+    const { error } = await supabase
+      .from('articles')
+      .delete()
+      .eq('id', id);
 
-  /* GÜNDƏM */
-  const gündemNews =
-    remaining.slice(4, 12);
+    if (error) {
+      setError(
+        'Xəbəri silmək mümkün olmadı.'
+      );
+      return;
+    }
 
-  /* AŞAĞI XƏBƏRLƏR */
-  const lowerNews =
-    remaining.slice(12, 20);
+    setMessage('Xəbər silindi.');
+    loadArticles();
+  }
 
-  /* SİYASƏT */
-  const politics =
-    articles
-      .filter(
-        (article) =>
-          article.category === 'siyaset' &&
-          article.id !== featured?.id
-      )
-      .slice(0, 4);
+  async function toggleFeatured(article) {
+    setError('');
+    setMessage('');
 
-  /* İQTİSADİYYAT */
-  const economy =
-    articles
-      .filter(
-        (article) =>
-          article.category === 'iqtisadiyyat' &&
-          article.id !== featured?.id
-      )
-      .slice(0, 4);
+    if (!article.is_featured) {
+      await supabase
+        .from('articles')
+        .update({
+          is_featured: false,
+        })
+        .eq('is_featured', true);
+    }
 
-  /* CƏMİYYƏT */
-  const society =
-    articles
-      .filter(
-        (article) =>
-          article.category === 'cemiyyet' &&
-          article.id !== featured?.id
-      )
-      .slice(0, 4);
+    const { error } = await supabase
+      .from('articles')
+      .update({
+        is_featured:
+          !article.is_featured,
+      })
+      .eq('id', article.id);
 
-  /* DÜNYA */
-  const world =
-    articles
-      .filter(
-        (article) =>
-          article.category === 'dunya' &&
-          article.id !== featured?.id
-      )
-      .slice(0, 4);
+    if (error) {
+      setError(
+        'Baş xəbər dəyişdirilə bilmədi.'
+      );
+      return;
+    }
+
+    setMessage(
+      article.is_featured
+        ? 'Baş xəbər ləğv edildi.'
+        : 'Xəbər baş xəbər seçildi.'
+    );
+
+    loadArticles();
+  }
+
+  const filteredArticles = useMemo(() => {
+    return articles.filter((article) => {
+      const matchesSearch =
+        article.title
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
+
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        article.category ===
+          categoryFilter;
+
+      const isVideo =
+        Boolean(
+          article.video_url
+        );
+
+      const matchesType =
+        typeFilter === 'all' ||
+        (typeFilter === 'video' &&
+          isVideo) ||
+        (typeFilter === 'news' &&
+          !isVideo);
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesType
+      );
+    });
+  }, [
+    articles,
+    search,
+    categoryFilter,
+    typeFilter,
+  ]);
+
+  const stats = {
+    total: articles.length,
+
+    videos: articles.filter(
+      (a) => a.video_url
+    ).length,
+
+    featured: articles.filter(
+      (a) => a.is_featured
+    ).length,
+
+    views: articles.reduce(
+      (sum, a) =>
+        sum + Number(a.views || 0),
+      0
+    ),
+  };
 
   return (
-    <main className="bg-white">
+    <div className="min-h-screen bg-[#f4f6f8] text-[#172b4d]">
 
-      {/* =====================================================
-          BAŞ XƏBƏR
-      ===================================================== */}
+      {/* SIDEBAR */}
 
-      {featured && (
-        <section className="max-w-7xl mx-auto px-4 pt-6">
+      <aside className="fixed left-0 top-0 bottom-0 w-[250px] bg-[#172b4d] text-white hidden lg:flex flex-col">
 
-          <div className="grid lg:grid-cols-[1.75fr_1fr] gap-6">
+        <div className="px-6 py-7 border-b border-white/10">
 
-            {/* ƏSAS XƏBƏR */}
+          <div className="text-[10px] tracking-[0.3em] text-white/40 uppercase">
+            PANORAMA
+          </div>
 
-            <Link
-              href={`/article/${featured.slug}`}
-              className="group relative block h-[430px] md:h-[500px] overflow-hidden bg-[#172b4d]"
-            >
+          <div className="text-2xl font-black mt-1">
+            ADMIN
+          </div>
 
-              {featured.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={featured.image_url}
-                  alt={featured.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#172b4d]">
-                  <span className="text-white/30 text-5xl font-bold">
-                    PANORAMA
-                  </span>
-                </div>
+          <div className="text-[10px] text-white/40 mt-1">
+            Xəbər idarəetmə sistemi
+          </div>
+
+        </div>
+
+        <nav className="p-4 space-y-1">
+
+          <button
+            onClick={() =>
+              setActiveMenu(
+                'dashboard'
+              )
+            }
+            className={`w-full text-left px-4 py-3 rounded-lg text-sm ${
+              activeMenu ===
+              'dashboard'
+                ? 'bg-white/10'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            📊 Dashboard
+          </button>
+
+          <button
+            onClick={() =>
+              setActiveMenu('articles')
+            }
+            className={`w-full text-left px-4 py-3 rounded-lg text-sm ${
+              activeMenu ===
+              'articles'
+                ? 'bg-white/10'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            📰 Xəbərlər
+          </button>
+
+          <button
+            onClick={() =>
+              setTypeFilter('video')
+            }
+            className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-white/5"
+          >
+            🎥 Video xəbərlər
+          </button>
+
+          <button
+            onClick={() =>
+              setActiveMenu('featured')
+            }
+            className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-white/5"
+          >
+            ⭐ Baş xəbərlər
+          </button>
+
+          <div className="pt-5 pb-2 px-4 text-[9px] uppercase tracking-[0.2em] text-white/30">
+            İDARƏETMƏ
+          </div>
+
+          <button
+            onClick={() =>
+              setActiveMenu('statistics')
+            }
+            className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-white/5"
+          >
+            📈 Statistikalar
+          </button>
+
+          <button
+            onClick={() =>
+              setActiveMenu('settings')
+            }
+            className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-white/5"
+          >
+            ⚙️ Parametrlər
+          </button>
+
+        </nav>
+
+        <div className="mt-auto p-5 border-t border-white/10 text-xs text-white/40">
+          PANORAMA Xəbər Agentliyi
+        </div>
+
+      </aside>
+
+      {/* MAIN */}
+
+      <main className="lg:ml-[250px]">
+
+        {/* TOPBAR */}
+
+        <header className="bg-white border-b border-gray-200 px-5 md:px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+          <div>
+            <div className="text-xs text-gray-400">
+              PANORAMA / ADMIN
+            </div>
+
+            <h1 className="text-2xl font-bold mt-1">
+              {activeMenu ===
+              'dashboard'
+                ? 'Dashboard'
+                : activeMenu ===
+                  'articles'
+                ? 'Xəbərlər'
+                : activeMenu ===
+                  'featured'
+                ? 'Baş xəbərlər'
+                : activeMenu ===
+                  'statistics'
+                ? 'Statistikalar'
+                : 'Parametrlər'}
+            </h1>
+          </div>
+
+          <button
+            onClick={openNewArticle}
+            className="bg-[#172b4d] text-white px-5 py-3 rounded-lg text-sm font-semibold hover:bg-[#1d4e89] transition"
+          >
+            + Yeni xəbər
+          </button>
+
+        </header>
+
+        <div className="p-5 md:p-8">
+
+          {/* MESSAGES */}
+
+          {message && (
+            <div className="mb-5 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+              ✓ {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* STATISTICS */}
+
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+            <StatCard
+              title="Ümumi xəbərlər"
+              value={stats.total}
+              icon="📰"
+            />
+
+            <StatCard
+              title="Video xəbərlər"
+              value={stats.videos}
+              icon="🎥"
+            />
+
+            <StatCard
+              title="Baş xəbərlər"
+              value={stats.featured}
+              icon="⭐"
+            />
+
+            <StatCard
+              title="Ümumi baxış"
+              value={stats.views.toLocaleString(
+                'az-AZ'
               )}
+              icon="👁️"
+            />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/5" />
+          </div>
 
-              <div className="absolute top-5 left-5">
-                <span className="bg-white text-[#172b4d] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest">
-                  Baş xəbər
-                </span>
-              </div>
+          {/* QUICK ACTIONS */}
 
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-8">
 
-                <div
-                  className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3"
-                  style={{
-                    color:
-                      categoryColor(
-                        featured.category
-                      ),
-                  }}
-                >
-                  {categoryName(
-                    featured.category
-                  )}
-                </div>
-
-                <h1 className="text-white text-2xl md:text-4xl lg:text-5xl font-bold leading-tight max-w-4xl">
-                  {featured.title}
-                </h1>
-
-                {featured.excerpt && (
-                  <p className="text-white/75 text-sm md:text-base mt-4 max-w-2xl line-clamp-2">
-                    {featured.excerpt}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-3 text-xs text-white/55 mt-5">
-
-                  <span>
-                    {featured.source ||
-                      'PANORAMA Xəbər'}
-                  </span>
-
-                  <span>•</span>
-
-                  <span>
-                    {new Date(
-                      featured.created_at
-                    ).toLocaleDateString(
-                      'az-AZ'
-                    )}
-                  </span>
-
-                </div>
-
-              </div>
-
-            </Link>
-
-            {/* GÜNÜN SEÇİMİ */}
-
-            <aside className="border border-gray-200">
-
-              <div className="px-5 py-5 border-b border-gray-200">
-
-                <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                  PANORAMA
-                </div>
-
-                <h2 className="text-xl font-bold text-[#172b4d]">
-                  Günün seçimi
-                </h2>
-
-              </div>
+            <div className="flex items-center justify-between mb-5">
 
               <div>
+                <h2 className="font-bold text-lg">
+                  Sürətli əməliyyatlar
+                </h2>
 
-                {sideNews.map(
-                  (article, index) => (
+                <p className="text-xs text-gray-400 mt-1">
+                  Admin panelindən əsas funksiyalar
+                </p>
+              </div>
 
-                    <Link
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+              <button
+                onClick={openNewArticle}
+                className="border border-gray-200 rounded-lg p-4 text-left hover:border-[#172b4d] hover:bg-gray-50 transition"
+              >
+                <div className="text-xl mb-2">
+                  📝
+                </div>
+
+                <div className="font-semibold text-sm">
+                  Yeni xəbər
+                </div>
+
+                <div className="text-[11px] text-gray-400 mt-1">
+                  Xəbər yarat
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setTypeFilter(
+                    'video'
+                  );
+                  setActiveMenu(
+                    'articles'
+                  );
+                }}
+                className="border border-gray-200 rounded-lg p-4 text-left hover:border-[#172b4d] hover:bg-gray-50 transition"
+              >
+                <div className="text-xl mb-2">
+                  🎥
+                </div>
+
+                <div className="font-semibold text-sm">
+                  Videolar
+                </div>
+
+                <div className="text-[11px] text-gray-400 mt-1">
+                  Video xəbərləri
+                </div>
+              </button>
+
+              <button
+                onClick={() =>
+                  setActiveMenu(
+                    'featured'
+                  )
+                }
+                className="border border-gray-200 rounded-lg p-4 text-left hover:border-[#172b4d] hover:bg-gray-50 transition"
+              >
+                <div className="text-xl mb-2">
+                  ⭐
+                </div>
+
+                <div className="font-semibold text-sm">
+                  Baş xəbər
+                </div>
+
+                <div className="text-[11px] text-gray-400 mt-1">
+                  Əsas xəbəri seç
+                </div>
+              </button>
+
+              <button
+                onClick={() =>
+                  setActiveMenu(
+                    'statistics'
+                  )
+                }
+                className="border border-gray-200 rounded-lg p-4 text-left hover:border-[#172b4d] hover:bg-gray-50 transition"
+              >
+                <div className="text-xl mb-2">
+                  📈
+                </div>
+
+                <div className="font-semibold text-sm">
+                  Statistikalar
+                </div>
+
+                <div className="text-[11px] text-gray-400 mt-1">
+                  Baxışlara bax
+                </div>
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* ARTICLES */}
+
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+
+            <div className="p-5 border-b border-gray-200">
+
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+
+                <div>
+                  <h2 className="font-bold text-lg">
+                    Xəbərlər
+                  </h2>
+
+                  <p className="text-xs text-gray-400 mt-1">
+                    {filteredArticles.length}{' '}
+                    nəticə göstərilir
+                  </p>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-2">
+
+                  <input
+                    value={search}
+                    onChange={(e) =>
+                      setSearch(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Xəbər axtar..."
+                    className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-[#172b4d]"
+                  />
+
+                  <select
+                    value={
+                      categoryFilter
+                    }
+                    onChange={(e) =>
+                      setCategoryFilter(
+                        e.target.value
+                      )
+                    }
+                    className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white"
+                  >
+                    <option value="all">
+                      Bütün kateqoriyalar
+                    </option>
+
+                    {CATEGORIES.map(
+                      (cat) => (
+                        <option
+                          key={
+                            cat.value
+                          }
+                          value={
+                            cat.value
+                          }
+                        >
+                          {cat.label}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  <select
+                    value={typeFilter}
+                    onChange={(e) =>
+                      setTypeFilter(
+                        e.target.value
+                      )
+                    }
+                    className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white"
+                  >
+                    <option value="all">
+                      Hamısı
+                    </option>
+
+                    <option value="news">
+                      Adi xəbərlər
+                    </option>
+
+                    <option value="video">
+                      Videolar
+                    </option>
+                  </select>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {loading ? (
+
+              <div className="p-12 text-center text-gray-400 text-sm">
+                Xəbərlər yüklənir...
+              </div>
+
+            ) : filteredArticles.length ===
+              0 ? (
+
+              <div className="p-12 text-center">
+
+                <div className="text-4xl mb-3">
+                  📰
+                </div>
+
+                <div className="font-semibold">
+                  Xəbər tapılmadı
+                </div>
+
+                <p className="text-xs text-gray-400 mt-1">
+                  Yeni xəbər əlavə edə bilərsən.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="divide-y divide-gray-100">
+
+                {filteredArticles.map(
+                  (article) => (
+
+                    <div
                       key={article.id}
-                      href={`/article/${article.slug}`}
-                      className="group flex gap-3 p-4 border-b border-gray-200 last:border-0"
+                      className="p-5 hover:bg-gray-50 transition"
                     >
 
-                      <div className="relative w-[105px] h-[72px] flex-none overflow-hidden bg-gray-100">
+                      <div className="flex flex-col xl:flex-row gap-5">
 
-                        {article.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={
-                              article.image_url
-                            }
-                            alt={
-                              article.title
-                            }
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                            PANORAMA
-                          </div>
-                        )}
+                        {/* IMAGE */}
 
-                        <span className="absolute top-1 left-1 bg-[#172b4d] text-white text-[9px] font-bold px-1.5 py-0.5">
-                          0{index + 1}
-                        </span>
+                        <div className="w-full xl:w-[170px] h-[105px] flex-none bg-gray-100 rounded-lg overflow-hidden">
 
-                      </div>
+                          {article.image_url ? (
 
-                      <div className="min-w-0">
+                            <img
+                              src={
+                                article.image_url
+                              }
+                              alt={
+                                article.title
+                              }
+                              className="w-full h-full object-cover"
+                            />
 
-                        <div
-                          className="text-[9px] font-bold uppercase mb-1"
-                          style={{
-                            color:
-                              categoryColor(
-                                article.category
-                              ),
-                          }}
-                        >
-                          {categoryName(
-                            article.category
+                          ) : article.video_url ? (
+
+                            <div className="w-full h-full bg-black flex items-center justify-center text-white text-2xl">
+                              ▶
+                            </div>
+
+                          ) : (
+
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
+                              PANORAMA
+                            </div>
+
                           )}
+
                         </div>
 
-                        <h3 className="text-[13px] font-semibold leading-snug line-clamp-3 group-hover:text-[#1D4E89] transition-colors">
-                          {article.title}
-                        </h3>
+                        {/* INFO */}
+
+                        <div className="flex-1 min-w-0">
+
+                          <div className="flex flex-wrap gap-2 mb-2">
+
+                            <span className="text-[10px] uppercase font-bold tracking-wider bg-gray-100 px-2 py-1 rounded">
+                              {article.category ||
+                                'xəbər'}
+                            </span>
+
+                            {article.video_url && (
+                              <span className="text-[10px] uppercase font-bold bg-[#172b4d] text-white px-2 py-1 rounded">
+                                🎥 Video
+                              </span>
+                            )}
+
+                            {article.is_featured && (
+                              <span className="text-[10px] uppercase font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
+                                ⭐ Baş xəbər
+                              </span>
+                            )}
+
+                          </div>
+
+                          <h3 className="font-bold text-base md:text-lg leading-snug">
+                            {article.title}
+                          </h3>
+
+                          {article.excerpt && (
+                            <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                              {article.excerpt}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-4 mt-3 text-[10px] text-gray-400">
+
+                            <span>
+                              {formatDate(
+                                article.created_at
+                              )}
+                            </span>
+
+                            <span>
+                              👁{' '}
+                              {article.views ||
+                                0}
+                            </span>
+
+                            {article.source && (
+                              <span>
+                                Mənbə:{' '}
+                                {
+                                  article.source
+                                }
+                              </span>
+                            )}
+
+                          </div>
+
+                        </div>
+
+                        {/* ACTIONS */}
+
+                        <div className="flex xl:flex-col gap-2 xl:w-[120px]">
+
+                          <button
+                            onClick={() =>
+                              openEditArticle(
+                                article
+                              )
+                            }
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-white hover:border-[#172b4d]"
+                          >
+                            ✏️ Redaktə
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              toggleFeatured(
+                                article
+                              )
+                            }
+                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-white"
+                          >
+                            ⭐{' '}
+                            {article.is_featured
+                              ? 'Ləğv et'
+                              : 'Baş xəbər'}
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              deleteArticle(
+                                article.id
+                              )
+                            }
+                            className="flex-1 border border-red-100 text-red-500 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-red-50"
+                          >
+                            🗑 Sil
+                          </button>
+
+                        </div>
 
                       </div>
 
-                    </Link>
+                    </div>
 
                   )
                 )}
 
               </div>
 
-            </aside>
-
-          </div>
-
-        </section>
-      )}
-
-      {/* =====================================================
-          REKLAM
-      ===================================================== */}
-
-      <section className="max-w-7xl mx-auto px-4 py-6">
-
-        {homepageAd ? (
-
-          <a
-            href={
-              homepageAd.link_url ||
-              '#'
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block border border-gray-200 bg-gray-50 overflow-hidden"
-          >
-
-            {homepageAd.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={
-                  homepageAd.image_url
-                }
-                alt={
-                  homepageAd.title ||
-                  'Reklam'
-                }
-                className="w-full max-h-[150px] object-cover"
-              />
-            ) : (
-              <div className="h-[90px] flex items-center justify-center text-xs text-gray-400">
-                {homepageAd.title ||
-                  'Reklam'}
-              </div>
             )}
 
-          </a>
-
-        ) : (
-
-          <div className="h-[70px] border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 uppercase tracking-[0.2em]">
-            Reklam sahəsi
           </div>
 
-        )}
+        </div>
 
-      </section>
+      </main>
 
-      {/* =====================================================
-          GÜNDƏM + VİDEO XƏBƏRLƏR
-      ===================================================== */}
+      {/* EDITOR MODAL */}
 
-      <section className="max-w-7xl mx-auto px-4 py-7">
+      {showEditor && (
 
-        <div className="grid lg:grid-cols-[2fr_0.85fr] gap-8">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center overflow-y-auto p-4 md:p-8">
 
-          {/* SOL TƏRƏF — ADİ XƏBƏRLƏR */}
+          <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden">
 
-          <div>
+            {/* MODAL HEADER */}
 
-            <SectionTitle
-              title="Gündəm"
-              href="/"
-            />
+            <div className="bg-[#172b4d] text-white px-6 py-5 flex items-center justify-between">
 
-            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8">
+              <div>
 
-              {gündemNews.map(
-                (article) => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                  />
-                )
-              )}
+                <div className="text-[9px] uppercase tracking-[0.25em] text-white/40">
+                  PANORAMA CMS
+                </div>
+
+                <h2 className="text-xl font-bold mt-1">
+                  {form.id
+                    ? 'Xəbəri redaktə et'
+                    : 'Yeni xəbər yarat'}
+                </h2>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  setShowEditor(false)
+                }
+                className="text-white/60 hover:text-white text-2xl"
+              >
+                ×
+              </button>
 
             </div>
 
-            {gündemNews.length === 0 && (
-              <p className="text-sm text-gray-400">
-                Hələ xəbər əlavə edilməyib.
-              </p>
-            )}
+            <form
+              onSubmit={saveArticle}
+              className="p-6 space-y-6"
+            >
 
-          </div>
+              {/* TITLE */}
 
-          {/* SAĞ TƏRƏF */}
+              <div>
 
-          <aside className="flex flex-col gap-6">
+                <label className="block text-xs font-bold mb-2">
+                  Xəbərin başlığı *
+                </label>
 
-            {/* =================================================
-                VİDEO XƏBƏRLƏR
-            ================================================= */}
+                <input
+                  value={form.title}
+                  onChange={(e) =>
+                    handleTitleChange(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Xəbərin başlığını yaz..."
+                  required
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-lg font-semibold outline-none focus:border-[#172b4d]"
+                />
 
-            {videoArticles.length > 0 && (
+              </div>
 
-              <div className="border border-gray-200">
+              {/* SLUG */}
 
-                <div className="bg-[#172b4d] text-white px-5 py-4">
+              <div>
 
-                  <div className="text-[9px] uppercase tracking-[0.2em] text-white/50 mb-1">
-                    PANORAMA
-                  </div>
+                <label className="block text-xs font-bold mb-2">
+                  Slug
+                </label>
 
-                  <h2 className="font-bold text-lg">
-                    🎥 Video xəbərlər
-                  </h2>
+                <input
+                  value={form.slug}
+                  onChange={(e) =>
+                    updateForm(
+                      'slug',
+                      e.target.value
+                    )
+                  }
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm"
+                />
+
+              </div>
+
+              {/* CATEGORY / SOURCE */}
+
+              <div className="grid md:grid-cols-2 gap-4">
+
+                <div>
+
+                  <label className="block text-xs font-bold mb-2">
+                    Kateqoriya
+                  </label>
+
+                  <select
+                    value={
+                      form.category
+                    }
+                    onChange={(e) =>
+                      updateForm(
+                        'category',
+                        e.target.value
+                      )
+                    }
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm bg-white"
+                  >
+
+                    {CATEGORIES.map(
+                      (cat) => (
+                        <option
+                          key={
+                            cat.value
+                          }
+                          value={
+                            cat.value
+                          }
+                        >
+                          {cat.label}
+                        </option>
+                      )
+                    )}
+
+                  </select>
 
                 </div>
 
                 <div>
 
-                  {videoArticles.map(
-                    (article) => (
+                  <label className="block text-xs font-bold mb-2">
+                    Mənbə
+                  </label>
 
-                      <Link
-                        key={article.id}
-                        href={`/article/${article.slug}`}
-                        className="group block p-4 border-b border-gray-200 last:border-none"
-                      >
+                  <input
+                    value={form.source}
+                    onChange={(e) =>
+                      updateForm(
+                        'source',
+                        e.target.value
+                      )
+                    }
+                    placeholder="Məsələn: APA, Report..."
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm"
+                  />
 
-                        {/* VİDEO */}
+                </div>
 
-                        <div className="relative w-full aspect-video bg-black overflow-hidden">
+              </div>
 
-                          <video
-                            src={
-                              article.video_url
-                            }
-                            preload="metadata"
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
+              {/* EXCERPT */}
 
-                          {/* PLAY */}
+              <div>
 
-                          <div className="absolute inset-0 flex items-center justify-center">
+                <label className="block text-xs font-bold mb-2">
+                  Qısa açıqlama
+                </label>
 
-                            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-
-                              <span className="text-[#172b4d] text-xl ml-1">
-                                ▶
-                              </span>
-
-                            </div>
-
-                          </div>
-
-                          {/* VIDEO YAZISI */}
-
-                          <div className="absolute bottom-2 left-2">
-
-                            <span className="bg-[#172b4d] text-white text-[9px] font-bold px-2 py-1">
-                              VİDEO
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                        {/* BAŞLIQ */}
-
-                        <div
-                          className="text-[9px] font-bold uppercase mt-3 mb-1"
-                          style={{
-                            color:
-                              categoryColor(
-                                article.category
-                              ),
-                          }}
-                        >
-                          {categoryName(
-                            article.category
-                          )}
-                        </div>
-
-                        <h3 className="text-[13px] font-semibold leading-snug group-hover:text-[#1D4E89] transition-colors">
-                          {article.title}
-                        </h3>
-
-                      </Link>
-
+                <textarea
+                  value={form.excerpt}
+                  onChange={(e) =>
+                    updateForm(
+                      'excerpt',
+                      e.target.value
                     )
+                  }
+                  rows={3}
+                  placeholder="Xəbər haqqında qısa məlumat..."
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm resize-none"
+                />
+
+              </div>
+
+              {/* CONTENT */}
+
+              <div>
+
+                <label className="block text-xs font-bold mb-2">
+                  Xəbərin mətni
+                </label>
+
+                <textarea
+                  value={form.content}
+                  onChange={(e) =>
+                    updateForm(
+                      'content',
+                      e.target.value
+                    )
+                  }
+                  rows={12}
+                  placeholder="Xəbərin tam mətnini yaz..."
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm leading-relaxed resize-y"
+                />
+
+              </div>
+
+              {/* IMAGE / VIDEO */}
+
+              <div className="grid md:grid-cols-2 gap-5">
+
+                {/* IMAGE */}
+
+                <div className="border border-gray-200 rounded-xl p-5">
+
+                  <label className="block text-xs font-bold mb-3">
+                    🖼 Xəbər şəkli
+                  </label>
+
+                  {form.image_url && (
+                    <img
+                      src={form.image_url}
+                      alt="Preview"
+                      className="w-full h-40 object-cover rounded-lg mb-3"
+                    />
                   )}
 
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={
+                      handleImageUpload
+                    }
+                    className="w-full text-xs"
+                  />
+
+                  {uploadingImage && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      Şəkil yüklənir...
+                    </p>
+                  )}
+
+                  <input
+                    value={
+                      form.image_url
+                    }
+                    onChange={(e) =>
+                      updateForm(
+                        'image_url',
+                        e.target.value
+                      )
+                    }
+                    placeholder="və ya şəkil URL-si"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs mt-3"
+                  />
+
                 </div>
 
-                <Link
-                  href="/video"
-                  className="block text-center py-3 text-xs font-semibold text-[#1D4E89] border-t border-gray-200 hover:bg-gray-50"
-                >
-                  Bütün video xəbərləri gör →
-                </Link>
+                {/* VIDEO */}
+
+                <div className="border border-gray-200 rounded-xl p-5">
+
+                  <label className="block text-xs font-bold mb-3">
+                    🎥 Video xəbər
+                  </label>
+
+                  {form.video_url && (
+                    <video
+                      src={
+                        form.video_url
+                      }
+                      controls
+                      className="w-full h-40 object-cover rounded-lg mb-3 bg-black"
+                    />
+                  )}
+
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={
+                      handleVideoUpload
+                    }
+                    className="w-full text-xs"
+                  />
+
+                  {uploadingVideo && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      Video yüklənir...
+                    </p>
+                  )}
+
+                  <input
+                    value={
+                      form.video_url
+                    }
+                    onChange={(e) =>
+                      updateForm(
+                        'video_url',
+                        e.target.value
+                      )
+                    }
+                    placeholder="və ya video URL-si"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs mt-3"
+                  />
+
+                </div>
 
               </div>
 
-            )}
+              {/* FEATURED */}
 
-            {/* =================================================
-                ƏN ÇOX OXUNAN
-            ================================================= */}
+              <label className="flex items-center gap-3 border border-gray-200 rounded-xl p-4 cursor-pointer">
 
-            <div className="border border-gray-200">
-
-              <div className="bg-[#172b4d] text-white px-5 py-4">
-
-                <div className="text-[9px] uppercase tracking-[0.2em] text-white/50 mb-1">
-                  Oxucuların seçimi
-                </div>
-
-                <h2 className="font-bold text-lg">
-                  Ən çox oxunanlar
-                </h2>
-
-              </div>
-
-              {mostRead.map(
-                (article, index) => (
-
-                  <Link
-                    key={article.id}
-                    href={`/article/${article.slug}`}
-                    className="group flex gap-3 p-4 border-b border-gray-200 last:border-none"
-                  >
-
-                    <span className="text-2xl font-bold text-gray-300 w-8 flex-none">
-                      {String(
-                        index + 1
-                      ).padStart(2, '0')}
-                    </span>
-
-                    <div>
-
-                      <div
-                        className="text-[9px] font-bold uppercase mb-1"
-                        style={{
-                          color:
-                            categoryColor(
-                              article.category
-                            ),
-                        }}
-                      >
-                        {categoryName(
-                          article.category
-                        )}
-                      </div>
-
-                      <h3 className="text-[13px] font-semibold leading-snug group-hover:text-[#1D4E89] transition-colors">
-                        {article.title}
-                      </h3>
-
-                      <div className="text-[10px] text-gray-400 mt-2">
-                        {article.views ||
-                          0}{' '}
-                        baxış
-                      </div>
-
-                    </div>
-
-                  </Link>
-
-                )
-              )}
-
-            </div>
-
-          </aside>
-
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          SİYASƏT
-      ===================================================== */}
-
-      {politics.length > 0 && (
-        <CategorySection
-          title="Siyasət"
-          slug="siyaset"
-          articles={politics}
-        />
-      )}
-
-      {/* =====================================================
-          İQTİSADİYYAT
-      ===================================================== */}
-
-      {economy.length > 0 && (
-        <CategorySection
-          title="İqtisadiyyat"
-          slug="iqtisadiyyat"
-          articles={economy}
-        />
-      )}
-
-      {/* =====================================================
-          CƏMİYYƏT
-      ===================================================== */}
-
-      {society.length > 0 && (
-        <CategorySection
-          title="Cəmiyyət"
-          slug="cemiyyet"
-          articles={society}
-        />
-      )}
-
-      {/* =====================================================
-          DÜNYA
-      ===================================================== */}
-
-      {world.length > 0 && (
-        <CategorySection
-          title="Dünya"
-          slug="dunya"
-          articles={world}
-        />
-      )}
-
-      {/* =====================================================
-          DİGƏR XƏBƏRLƏR
-      ===================================================== */}
-
-      {lowerNews.length > 0 && (
-
-        <section className="max-w-7xl mx-auto px-4 py-8">
-
-          <SectionTitle
-            title="Digər xəbərlər"
-          />
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
-            {lowerNews.map(
-              (article) => (
-                <ArticleCard
-                  key={article.id}
-                  article={article}
+                <input
+                  type="checkbox"
+                  checked={
+                    form.is_featured
+                  }
+                  onChange={(e) =>
+                    updateForm(
+                      'is_featured',
+                      e.target.checked
+                    )
+                  }
+                  className="w-4 h-4"
                 />
-              )
-            )}
+
+                <div>
+
+                  <div className="text-sm font-bold">
+                    ⭐ Baş xəbər kimi göstər
+                  </div>
+
+                  <div className="text-xs text-gray-400 mt-1">
+                    Bu xəbər ana səhifənin əsas xəbər bölməsində görünəcək.
+                  </div>
+
+                </div>
+
+              </label>
+
+              {/* BUTTONS */}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowEditor(false)
+                  }
+                  className="px-5 py-3 rounded-lg border border-gray-200 text-sm font-semibold"
+                >
+                  Ləğv et
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    saving ||
+                    uploadingImage ||
+                    uploadingVideo
+                  }
+                  className="px-7 py-3 rounded-lg bg-[#172b4d] text-white text-sm font-bold disabled:opacity-50"
+                >
+                  {saving
+                    ? 'Yadda saxlanılır...'
+                    : form.id
+                    ? 'Dəyişiklikləri saxla'
+                    : 'Xəbəri dərc et'}
+                </button>
+
+              </div>
+
+            </form>
 
           </div>
 
-        </section>
-
-      )}
-
-      {/* =====================================================
-          FOTO / VİDEO
-      ===================================================== */}
-
-      <section className="max-w-7xl mx-auto px-4 py-8">
-
-        <div className="grid md:grid-cols-2 gap-5">
-
-          <Link
-            href="/foto"
-            className="group relative overflow-hidden bg-[#172b4d] min-h-[190px] p-7"
-          >
-
-            <div className="absolute right-5 bottom-[-25px] text-[120px] font-black text-white/5">
-              FOTO
-            </div>
-
-            <div className="relative">
-
-              <div className="text-[10px] uppercase tracking-[0.2em] text-white/45 mb-3">
-                PANORAMA
-              </div>
-
-              <h2 className="text-2xl font-bold text-white">
-                Foto xəbərlər
-              </h2>
-
-              <p className="text-sm text-white/60 mt-2 max-w-sm">
-                Azərbaycandan və dünyadan
-                ən maraqlı görüntülər.
-              </p>
-
-              <span className="inline-block mt-5 text-xs font-bold text-white">
-                Bax →
-              </span>
-
-            </div>
-
-          </Link>
-
-          <Link
-            href="/video"
-            className="group relative overflow-hidden bg-gray-100 min-h-[190px] p-7"
-          >
-
-            <div className="absolute right-5 bottom-[-25px] text-[120px] font-black text-gray-200">
-              VIDEO
-            </div>
-
-            <div className="relative">
-
-              <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-3">
-                PANORAMA
-              </div>
-
-              <h2 className="text-2xl font-bold text-[#172b4d]">
-                Video xəbərlər
-              </h2>
-
-              <p className="text-sm text-gray-500 mt-2 max-w-sm">
-                Günün ən vacib video xəbərləri.
-              </p>
-
-              <span className="inline-block mt-5 text-xs font-bold text-[#172b4d]">
-                Bax →
-              </span>
-
-            </div>
-
-          </Link>
-
         </div>
 
-      </section>
-
-      {/* =====================================================
-          ƏMƏKDAŞLIQ
-      ===================================================== */}
-
-      <section className="max-w-7xl mx-auto px-4 pb-10">
-
-        <div className="border border-gray-200 bg-[#f7f8fa] p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-
-          <div>
-
-            <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">
-              ƏMƏKDAŞLIQ
-            </div>
-
-            <h3 className="text-xl font-bold text-[#172b4d]">
-              PANORAMA-da reklam yerləşdirin
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-1">
-              Reklam və əməkdaşlıq üçün
-              bizimlə əlaqə saxlayın.
-            </p>
-
-          </div>
-
-          <a
-            href="https://wa.me/994553737900?text=Salam%2C%20saytınızda%20reklam%20yerləşdirmək%20istəyirəm"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#172b4d] text-white px-6 py-3 text-sm font-semibold hover:bg-[#1D4E89] transition-colors"
-          >
-            Əlaqə saxla →
-          </a>
-
-        </div>
-
-      </section>
-
-    </main>
-  );
-}
-
-/* =========================================================
-   BÖLMƏ BAŞLIĞI
-========================================================= */
-
-function SectionTitle({
-  title,
-  href,
-}) {
-
-  return (
-
-    <div className="flex items-center gap-4 mb-6">
-
-      <h2 className="text-2xl font-bold text-[#172b4d] whitespace-nowrap">
-        {title}
-      </h2>
-
-      <div className="h-[2px] flex-1 bg-[#172b4d]" />
-
-      {href && (
-        <Link
-          href={href}
-          className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors"
-        >
-          Hamısı →
-        </Link>
       )}
 
     </div>
-
   );
 }
 
-/* =========================================================
-   KATEQORİYA BÖLMƏSİ
-========================================================= */
-
-function CategorySection({
+function StatCard({
   title,
-  slug,
-  articles,
+  value,
+  icon,
 }) {
-
   return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5">
 
-    <section className="bg-[#f7f8fa] border-y border-gray-200">
+      <div className="flex items-start justify-between">
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div>
 
-        <div className="flex items-center gap-4 mb-6">
-
-          <div>
-
-            <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-              PANORAMA
-            </div>
-
-            <h2 className="text-2xl font-bold text-[#172b4d]">
-              {title}
-            </h2>
-
+          <div className="text-[11px] text-gray-400 font-medium">
+            {title}
           </div>
 
-          <div className="h-[2px] flex-1 bg-[#172b4d]" />
-
-          <Link
-            href={`/${slug}`}
-            className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors"
-          >
-            Daha çox →
-          </Link>
+          <div className="text-2xl font-black mt-2 text-[#172b4d]">
+            {value}
+          </div>
 
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
-          {articles.map(
-            (article) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-              />
-            )
-          )}
-
+        <div className="w-10 h-10 rounded-lg bg-[#f1f4f7] flex items-center justify-center">
+          {icon}
         </div>
 
       </div>
 
-    </section>
-
+    </div>
   );
 }
