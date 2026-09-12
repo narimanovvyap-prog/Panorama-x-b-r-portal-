@@ -5,15 +5,108 @@ import Link from 'next/link';
 
 export const revalidate = 0;
 
+
+// =====================================================
+// XƏBƏRİ GƏTİR
+// =====================================================
+
 async function getArticle(slug) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('articles')
     .select('*')
     .eq('slug', slug)
     .single();
 
+  if (error) {
+    console.error('Xəbər yükləmə xətası:', error);
+  }
+
   return data;
 }
+
+
+// =====================================================
+// TELEGRAM / WHATSAPP / FACEBOOK / X PREVIEW
+// =====================================================
+
+export async function generateMetadata({ params }) {
+  const article = await getArticle(params.slug);
+
+  const siteUrl =
+    'https://panorama-x-b-r-portal.vercel.app';
+
+  if (!article) {
+    return {
+      title: 'PANORAMA XƏBƏR',
+      description:
+        'PANORAMA XƏBƏR — Azərbaycandan və dünyadan ən son xəbərlər.',
+    };
+  }
+
+  const articleUrl =
+    `${siteUrl}/article/${article.slug}`;
+
+  const description =
+    article.excerpt ||
+    'PANORAMA XƏBƏR — Azərbaycandan və dünyadan ən son xəbərlər.';
+
+  return {
+    title: article.title,
+
+    description: description,
+
+    alternates: {
+      canonical: articleUrl,
+    },
+
+    openGraph: {
+      title: article.title,
+
+      description: description,
+
+      url: articleUrl,
+
+      siteName: 'PANORAMA XƏBƏR',
+
+      locale: 'az_AZ',
+
+      type: 'article',
+
+      images: article.image_url
+        ? [
+            {
+              url: article.image_url,
+              width: 1200,
+              height: 630,
+              alt: article.title,
+            },
+          ]
+        : [],
+    },
+
+    twitter: {
+      card: 'summary_large_image',
+
+      title: article.title,
+
+      description: description,
+
+      images: article.image_url
+        ? [article.image_url]
+        : [],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
+
+
+// =====================================================
+// XƏBƏR SƏHİFƏSİ
+// =====================================================
 
 export default async function ArticlePage({ params }) {
   const article = await getArticle(params.slug);
@@ -21,6 +114,7 @@ export default async function ArticlePage({ params }) {
   if (!article) {
     notFound();
   }
+
 
   // =====================================================
   // BAXIŞ SAYINI ARTIR
@@ -33,6 +127,7 @@ export default async function ArticlePage({ params }) {
   } catch (error) {
     console.error('View count error:', error);
   }
+
 
   // =====================================================
   // ƏLAQƏLİ XƏBƏRLƏR
@@ -47,6 +142,11 @@ export default async function ArticlePage({ params }) {
     .neq('id', article.id)
     .order('created_at', { ascending: false })
     .limit(3);
+
+
+  // =====================================================
+  // TARİX / SAAT
+  // =====================================================
 
   const createdDate = article.created_at
     ? new Date(article.created_at)
@@ -67,10 +167,16 @@ export default async function ArticlePage({ params }) {
       })
     : '';
 
+
+  // =====================================================
+  // BAXIŞ
+  // =====================================================
+
   const currentViews =
     typeof article.views === 'number'
       ? article.views + 1
       : 1;
+
 
   return (
     <main className="bg-[#f8fafc] min-h-screen">
@@ -82,6 +188,7 @@ export default async function ArticlePage({ params }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10">
 
         <div className="max-w-5xl mx-auto">
+
 
           {/* =================================================
               BREADCRUMB
@@ -96,9 +203,7 @@ export default async function ArticlePage({ params }) {
               Əsas səhifə
             </Link>
 
-            <span>
-              /
-            </span>
+            <span>/</span>
 
             <Link
               href={`/${article.category}`}
@@ -110,9 +215,7 @@ export default async function ArticlePage({ params }) {
               {categoryName(article.category)}
             </Link>
 
-            <span>
-              /
-            </span>
+            <span>/</span>
 
             <span className="truncate max-w-[220px]">
               Xəbər
@@ -129,11 +232,13 @@ export default async function ArticlePage({ params }) {
 
             <div className="p-5 sm:p-7 md:p-10">
 
+
               {/* KATEQORİYA */}
 
               <div className="flex flex-wrap items-center gap-3 mb-5">
 
                 {article.is_breaking ? (
+
                   <span className="inline-flex items-center gap-2 bg-red-600 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest">
 
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
@@ -141,38 +246,48 @@ export default async function ArticlePage({ params }) {
                     Təcili xəbər
 
                   </span>
+
                 ) : (
+
                   <span
                     className="inline-block px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
                     style={{
                       color: categoryColor(
                         article.category
                       ),
-                      backgroundColor: `${categoryColor(
-                        article.category
-                      )}12`,
+                      backgroundColor:
+                        `${categoryColor(
+                          article.category
+                        )}12`,
                     }}
                   >
                     {categoryName(article.category)}
                   </span>
+
                 )}
 
               </div>
 
 
-              {/* BAŞLIQ */}
+              {/* =================================================
+                  BAŞLIQ
+              ================================================= */}
 
               <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.12] tracking-tight text-[#111827] max-w-4xl">
                 {article.title}
               </h1>
 
 
-              {/* QISA AÇIQLAMA */}
+              {/* =================================================
+                  QISA AÇIQLAMA
+              ================================================= */}
 
               {article.excerpt && (
+
                 <p className="mt-5 text-base md:text-lg leading-relaxed text-gray-600 max-w-3xl">
                   {article.excerpt}
                 </p>
+
               )}
 
 
@@ -184,9 +299,11 @@ export default async function ArticlePage({ params }) {
 
                 <div className="flex flex-wrap items-center gap-4">
 
+
                   {/* TARİX */}
 
                   {formattedDate && (
+
                     <div className="flex items-center gap-2">
 
                       <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm">
@@ -206,12 +323,14 @@ export default async function ArticlePage({ params }) {
                       </div>
 
                     </div>
+
                   )}
 
 
                   {/* SAAT */}
 
                   {formattedTime && (
+
                     <div className="flex items-center gap-2">
 
                       <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm">
@@ -231,6 +350,7 @@ export default async function ArticlePage({ params }) {
                       </div>
 
                     </div>
+
                   )}
 
 
@@ -259,7 +379,9 @@ export default async function ArticlePage({ params }) {
                 </div>
 
 
-                {/* PAYLAŞ */}
+                {/* =================================================
+                    PAYLAŞ
+                ================================================= */}
 
                 <div className="flex items-center gap-2">
 
@@ -267,9 +389,12 @@ export default async function ArticlePage({ params }) {
                     Paylaş
                   </span>
 
+
+                  {/* FACEBOOK */}
+
                   <a
                     href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-                      `https://panorama.az/article/${article.slug}`
+                      articleUrl(article.slug)
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -279,11 +404,14 @@ export default async function ArticlePage({ params }) {
                     f
                   </a>
 
+
+                  {/* X */}
+
                   <a
                     href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
                       article.title
                     )}&url=${encodeURIComponent(
-                      `https://panorama.az/article/${article.slug}`
+                      articleUrl(article.slug)
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -305,9 +433,8 @@ export default async function ArticlePage({ params }) {
             ================================================= */}
 
             {article.image_url && (
-              <div className="border-t border-gray-200 bg-gray-100">
 
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="border-t border-gray-200 bg-gray-100">
 
                 <img
                   src={article.image_url}
@@ -316,6 +443,7 @@ export default async function ArticlePage({ params }) {
                 />
 
               </div>
+
             )}
 
 
@@ -324,6 +452,7 @@ export default async function ArticlePage({ params }) {
             ================================================= */}
 
             {article.source && (
+
               <div className="px-5 sm:px-7 md:px-10 py-3 bg-gray-50 border-t border-gray-200">
 
                 <div className="text-[10px] uppercase tracking-widest text-gray-400">
@@ -335,6 +464,7 @@ export default async function ArticlePage({ params }) {
                 </div>
 
               </div>
+
             )}
 
           </div>
@@ -387,6 +517,7 @@ export default async function ArticlePage({ params }) {
           ================================================= */}
 
           {related && related.length > 0 && (
+
             <section className="mt-10">
 
               <div className="flex items-end justify-between gap-4 mb-5">
@@ -427,30 +558,32 @@ export default async function ArticlePage({ params }) {
                       : '';
 
                   return (
+
                     <Link
                       key={item.id}
                       href={`/article/${item.slug}`}
                       className="group block bg-white border border-gray-200 hover:shadow-lg transition-all duration-300"
                     >
 
+
                       {/* ŞƏKİL */}
 
                       <div className="aspect-[16/10] bg-gray-100 overflow-hidden">
 
                         {item.image_url ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
 
-                            <img
-                              src={item.image_url}
-                              alt={item.title}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                          </>
+                          <img
+                            src={item.image_url}
+                            alt={item.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+
                         ) : (
+
                           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
                             Şəkil yoxdur
                           </div>
+
                         )}
 
                       </div>
@@ -465,9 +598,10 @@ export default async function ArticlePage({ params }) {
                           <span
                             className="text-[9px] font-bold uppercase tracking-widest"
                             style={{
-                              color: categoryColor(
-                                item.category
-                              ),
+                              color:
+                                categoryColor(
+                                  item.category
+                                ),
                             }}
                           >
                             {categoryName(
@@ -481,9 +615,11 @@ export default async function ArticlePage({ params }) {
 
                         </div>
 
+
                         <h3 className="font-serif text-base font-bold leading-snug text-[#111827] line-clamp-3 group-hover:text-[#2563eb] transition-colors">
                           {item.title}
                         </h3>
+
 
                         <div className="mt-3 pt-3 border-t border-gray-100 text-[10px] font-bold text-gray-400 group-hover:text-[#2563eb] transition-colors">
                           Xəbəri oxu →
@@ -492,12 +628,15 @@ export default async function ArticlePage({ params }) {
                       </div>
 
                     </Link>
+
                   );
+
                 })}
 
               </div>
 
             </section>
+
           )}
 
 
@@ -522,4 +661,13 @@ export default async function ArticlePage({ params }) {
 
     </main>
   );
+}
+
+
+// =====================================================
+// SAYTIN ƏSAS URL-İ
+// =====================================================
+
+function articleUrl(slug) {
+  return `https://panorama-x-b-r-portal.vercel.app/article/${slug}`;
 }
