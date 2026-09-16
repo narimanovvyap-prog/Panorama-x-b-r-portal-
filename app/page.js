@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import ArticleCard from '@/components/ArticleCard';
+import HeroSlider from '@/components/HeroSlider';
 import { categoryName, categoryColor } from '@/lib/categories';
 
 export const revalidate = 0;
@@ -21,7 +22,7 @@ async function getData() {
     .select('*')
     .eq('is_featured', true)
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(6);
 
   const { data: mostRead } = await supabase
     .from('articles')
@@ -64,10 +65,7 @@ async function getData() {
 
   return {
     articles: articles || [],
-    featured:
-      featured?.[0] ||
-      articles?.[0] ||
-      null,
+    featured: featured || [],
     mostRead: mostRead || [],
     advertisements: activeAdvertisements,
   };
@@ -81,8 +79,17 @@ export default async function HomePage() {
     advertisements,
   } = await getData();
 
+  const featuredArticles =
+    featured.length > 0
+      ? featured
+      : articles.slice(0, 6);
+
+  const featuredIds = new Set(
+    featuredArticles.map((article) => article.id)
+  );
+
   const remaining = articles.filter(
-    (article) => article.id !== featured?.id
+    (article) => !featuredIds.has(article.id)
   );
 
   const homepageAd =
@@ -90,7 +97,7 @@ export default async function HomePage() {
 
   const sideNews = remaining.slice(0, 4);
 
-  const gündemNews = remaining
+  const gündəmNews = remaining
     .filter((article) => !article.video_url)
     .slice(0, 8);
 
@@ -118,7 +125,7 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'siyaset' &&
-        article.id !== featured?.id &&
+        !featuredIds.has(article.id) &&
         !article.video_url
     )
     .slice(0, 4);
@@ -127,7 +134,7 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'iqtisadiyyat' &&
-        article.id !== featured?.id &&
+        !featuredIds.has(article.id) &&
         !article.video_url
     )
     .slice(0, 4);
@@ -136,7 +143,7 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'cemiyyet' &&
-        article.id !== featured?.id &&
+        !featuredIds.has(article.id) &&
         !article.video_url
     )
     .slice(0, 4);
@@ -145,7 +152,7 @@ export default async function HomePage() {
     .filter(
       (article) =>
         article.category === 'dunya' &&
-        article.id !== featured?.id &&
+        !featuredIds.has(article.id) &&
         !article.video_url
     )
     .slice(0, 4);
@@ -157,84 +164,16 @@ export default async function HomePage() {
           BAŞ XƏBƏR
       ================================= */}
 
-      {featured && (
+      {featuredArticles.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 pt-6">
 
           <div className="grid lg:grid-cols-[1.75fr_1fr] gap-6">
 
-            {/* ƏSAS XƏBƏR */}
+            {/* AVTOMATİK BAŞ XƏBƏR SLAYDERİ */}
 
-            <Link
-              href={`/article/${featured.slug}`}
-              className="group relative block h-[430px] md:h-[500px] overflow-hidden bg-[#172b4d]"
-            >
-
-              {featured.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={featured.image_url}
-                  alt={featured.title}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#172b4d]">
-                  <span className="text-white/30 text-5xl font-bold">
-                    PANORAMA
-                  </span>
-                </div>
-              )}
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/5" />
-
-              <div className="absolute top-5 left-5">
-                <span className="bg-white text-[#172b4d] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest">
-                  Baş xəbər
-                </span>
-              </div>
-
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-
-                <div
-                  className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3"
-                  style={{
-                    color: categoryColor(
-                      featured.category
-                    ),
-                  }}
-                >
-                  {categoryName(featured.category)}
-                </div>
-
-                <h1 className="text-white text-2xl md:text-4xl lg:text-5xl font-bold leading-tight max-w-4xl">
-                  {featured.title}
-                </h1>
-
-                {featured.excerpt && (
-                  <p className="text-white/75 text-sm md:text-base mt-4 max-w-2xl line-clamp-2">
-                    {featured.excerpt}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-3 text-xs text-white/55 mt-5">
-
-                  <span>
-                    {featured.source ||
-                      'PANORAMA Xəbər'}
-                  </span>
-
-                  <span>•</span>
-
-                  <span>
-                    {new Date(
-                      featured.created_at
-                    ).toLocaleDateString('az-AZ')}
-                  </span>
-
-                </div>
-
-              </div>
-
-            </Link>
+            <HeroSlider
+              articles={featuredArticles}
+            />
 
             {/* GÜNÜN SEÇİMİ */}
 
@@ -377,7 +316,7 @@ export default async function HomePage() {
 
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8">
 
-              {gündemNews.map(
+              {gündəmNews.map(
                 (article) => (
                   <ArticleCard
                     key={article.id}
@@ -388,7 +327,7 @@ export default async function HomePage() {
 
             </div>
 
-            {gündemNews.length === 0 && (
+            {gündəmNews.length === 0 && (
               <p className="text-sm text-gray-400">
                 Hələ xəbər əlavə edilməyib.
               </p>
@@ -681,8 +620,6 @@ function VideoSection({ articles }) {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* BAŞLIQ */}
-
         <div className="flex items-center gap-4 mb-6">
 
           <div>
@@ -708,9 +645,6 @@ function VideoSection({ articles }) {
 
         </div>
 
-
-        {/* VİDEOLAR */}
-
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {articles.map((article) => (
@@ -719,8 +653,6 @@ function VideoSection({ articles }) {
               key={article.id}
               className="bg-white border border-gray-200 overflow-hidden group"
             >
-
-              {/* VİDEO */}
 
               <div className="relative bg-black aspect-video">
 
@@ -732,20 +664,15 @@ function VideoSection({ articles }) {
                   className="w-full h-full object-cover"
                 />
 
-                {/* VIDEO NİŞANI */}
-
                 <div className="absolute top-3 left-3 pointer-events-none">
 
                   <span className="bg-red-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
-                    ▶ Video
+                    ▶️ Video
                   </span>
 
                 </div>
 
               </div>
-
-
-              {/* MƏLUMAT */}
 
               <div className="p-4">
 
@@ -776,7 +703,6 @@ function VideoSection({ articles }) {
 
                 </div>
 
-
                 <Link
                   href={`/article/${article.slug}`}
                 >
@@ -787,13 +713,11 @@ function VideoSection({ articles }) {
 
                 </Link>
 
-
                 {article.excerpt && (
                   <p className="mt-2 text-[13px] leading-relaxed text-gray-500 line-clamp-2">
                     {article.excerpt}
                   </p>
                 )}
-
 
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
 
