@@ -27,6 +27,7 @@ export async function generateMetadata({ params }) {
   }
 
   const title = article.title || 'PANORAMA XƏBƏR';
+
   const description =
     article.excerpt ||
     article.content?.replace(/<[^>]*>/g, '').slice(0, 200) ||
@@ -107,7 +108,7 @@ export default async function ArticlePage({ params }) {
 
         {/* Qısa mətn */}
         {article.excerpt && (
-          <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-6">
+          <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-6 text-left">
             {article.excerpt}
           </p>
         )}
@@ -140,7 +141,17 @@ export default async function ArticlePage({ params }) {
 
         {/* Xəbər mətni */}
         <div
-          className="prose prose-lg max-w-none text-gray-900 leading-relaxed"
+          className="
+            prose prose-lg max-w-none
+            text-gray-900
+            text-left
+            leading-relaxed
+            whitespace-pre-wrap
+          "
+          style={{
+            whiteSpace: 'pre-wrap',
+            textAlign: 'left',
+          }}
           dangerouslySetInnerHTML={{ __html: cleanContent }}
         />
 
