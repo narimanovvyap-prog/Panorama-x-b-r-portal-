@@ -5,103 +5,79 @@ import Link from 'next/link';
 export default function NewsTicker({ articles = [] }) {
   if (!articles.length) return null;
 
+  // Fasiləsiz animasiya üçün xəbərləri təkrarlayırıq
   const items = [...articles, ...articles];
 
   return (
-    <section className="w-full bg-white border-b border-slate-200 shadow-[0_1px_8px_rgba(15,42,67,0.05)]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <section className="w-full border-b border-red-100 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.04)]">
+      <div className="mx-auto flex h-[48px] max-w-7xl">
 
-        <div className="flex items-center h-[52px] overflow-hidden">
+        {/* =====================================================
+            SON DƏQİQƏ BLOKU
+        ===================================================== */}
 
-          {/* SOL HİSSƏ */}
-          <div className="flex items-center gap-3 pr-5 sm:pr-7 border-r border-slate-200 flex-none">
+        <div className="relative z-20 flex flex-none items-center bg-[#C62828] px-4 sm:px-5">
 
-            <div className="relative flex items-center justify-center">
-              <span className="absolute w-3 h-3 rounded-full bg-blue-200 animate-ping" />
+          {/* Canlı nöqtə */}
+          <span className="relative mr-2.5 flex h-3 w-3 items-center justify-center">
+            <span className="absolute h-3 w-3 animate-ping rounded-full bg-white/50" />
+            <span className="relative h-2 w-2 rounded-full bg-white" />
+          </span>
 
-              <span className="relative w-2.5 h-2.5 rounded-full bg-[#1D4E89]" />
-            </div>
+          <span className="whitespace-nowrap text-[10px] font-extrabold uppercase tracking-[0.12em] text-white sm:text-[11px]">
+            SON DƏQİQƏ
+          </span>
 
-            <div className="leading-none">
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#102A43]">
-                CANLI
-              </div>
+        </div>
 
-              <div className="text-[9px] text-slate-400 mt-1 whitespace-nowrap">
-                Son xəbərlər
-              </div>
-            </div>
+        {/* =====================================================
+            XƏBƏR AXINI
+        ===================================================== */}
 
-          </div>
+        <div className="relative min-w-0 flex-1 overflow-hidden bg-white">
 
-          {/* XƏBƏR AXINI */}
-          <div className="relative flex-1 overflow-hidden h-full">
+          {/* Sol fade */}
+          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-10 bg-gradient-to-r from-white to-transparent" />
 
-            {/* Sol gradient */}
-            <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+          {/* Sağ fade */}
+          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-10 bg-gradient-to-l from-white to-transparent" />
 
-            {/* Sağ gradient */}
-            <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+          <div className="news-ticker flex h-full w-max items-center">
 
-            <div className="news-ticker flex items-center h-full whitespace-nowrap">
+            {items.map((article, index) => (
+              <Link
+                key={`${article.id}-${index}`}
+                href={`/article/${article.slug}`}
+                className="group flex h-full items-center gap-3 px-5 text-[12px] font-medium text-[#263A4D] transition-colors hover:text-[#C62828] sm:px-7 sm:text-[13px]"
+              >
 
-              {items.map((article, index) => (
-                <Link
-                  key={`${article.id}-${index}`}
-                  href={`/article/${article.slug}`}
-                  className="
-                    group
-                    flex
-                    items-center
-                    gap-3
-                    px-5
-                    sm:px-7
-                    h-full
-                    text-[13px]
-                    font-medium
-                    text-[#263A4D]
-                    hover:text-[#1D4E89]
-                    transition-colors
-                  "
-                >
+                {/* Xəbər nöqtəsi */}
+                <span className="h-1.5 w-1.5 flex-none rounded-full bg-[#C62828] transition-transform group-hover:scale-125" />
 
-                  {/* Kiçik xəbər işarəsi */}
-                  <span className="
-                    flex-none
-                    w-1.5
-                    h-1.5
-                    rounded-full
-                    bg-slate-300
-                    group-hover:bg-[#1D4E89]
-                    transition-colors
-                  " />
+                {/* Başlıq */}
+                <span className="max-w-[420px] truncate">
+                  {article.title}
+                </span>
 
-                  {/* Xəbər başlığı */}
-                  <span className="max-w-[420px] truncate">
-                    {article.title}
-                  </span>
+                {/* Ayırıcı */}
+                <span className="text-slate-300">
+                  •
+                </span>
 
-                  {/* Ayırıcı */}
-                  <span className="text-slate-300 text-[15px]">
-                    •
-                  </span>
-
-                </Link>
-              ))}
-
-            </div>
+              </Link>
+            ))}
 
           </div>
+        </div>
 
-          {/* SAĞDA XƏBƏRLƏR SAYI */}
-          <div className="hidden lg:flex items-center pl-5 border-l border-slate-200 flex-none">
+        {/* =====================================================
+            SAĞ TƏRƏF
+        ===================================================== */}
 
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">
-              Gündəlik xəbər axını
-            </span>
-
-          </div>
-
+        <div className="hidden flex-none items-center border-l border-slate-200 bg-white px-4 xl:flex">
+          <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+            PANORAMA XƏBƏR
+          </span>
         </div>
 
       </div>
