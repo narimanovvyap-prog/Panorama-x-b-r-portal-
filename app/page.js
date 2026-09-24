@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 import ArticleCard from '@/components/ArticleCard';
 import HeroSlider from '@/components/HeroSlider';
 import NewsTicker from '@/components/NewsTicker';
@@ -8,94 +8,278 @@ import { categoryName, categoryColor } from '@/lib/categories';
 export const revalidate = 0;
 
 /* =========================================================
-   MƏLUMATLAR
+   DATA
 ========================================================= */
 
 async function getData() {
-  const { data: articles, error: articlesError } = await supabase
-    .from('articles')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(80);
+  const now = new Date().toISOString();
 
-  if (articlesError) {
-    console.error('Xəbər xətası:', articlesError);
-  }
+  const [
+    articlesRes,
+    featuredRes,
+    mostReadRes,
+    breakingRes,
+    advertisementsRes,
+  ] = await Promise.all([
+    supabase
+      .from('articles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(80),
 
-  const { data: featured, error: featuredError } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(6);
+    supabase
+      .from('articles')
+      .select('*')
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(6),
 
-  if (featuredError) {
-    console.error('Baş xəbər xətası:', featuredError);
-  }
+    supabase
+      .from('articles')
+      .select('*')
+      .order('views', { ascending: false })
+      .limit(6),
 
-  const { data: mostRead, error: mostReadError } = await supabase
-    .from('articles')
-    .select(
-      'id, title, slug, views, image_url, category, created_at'
-    )
-    .order('views', { ascending: false })
-    .limit(6);
+    supabase
+      .from('articles')
+      .select('*')
+      .eq('is_breaking', true)
+      .order('created_at', { ascending: false })
+      .limit(8),
 
-  if (mostReadError) {
-    console.error('Ən çox oxunan xətası:', mostReadError);
-  }
-
-  const { data: breakingNews, error: breakingError } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('is_breaking', true)
-    .order('created_at', { ascending: false })
-    .limit(8);
-
-  if (breakingError) {
-    console.error('Son dəqiqə xətası:', breakingError);
-  }
-
-  const { data: advertisements, error: adsError } =
-    await supabase
+    supabase
       .from('advertisements')
       .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+      .eq('is_active', true),
+  ]);
 
-  if (adsError) {
-    console.error('Reklam xətası:', adsError);
-  }
+  const articles = articlesRes.data || [];
+  const featuredRaw = featuredRes.data || [];
+  const mostRead = mostReadRes.data || [];
+  const breakingNews = breakingRes.data || [];
+  const advertisements = advertisementsRes.data || [];
 
-  const now = new Date();
+  const activeAds = advertisements.filter((ad) => {
+    const startOk = !ad.start_date || new Date(ad.start_date) <= new Date(now);
+    const endOk = !ad.end_date || new Date(ad.end_date) >= new Date(now);
 
-  const activeAdvertisements = (advertisements || []).filter((ad) => {
-    const startOk =
-      !ad.start_date ||
-      new Date(ad.start_date) <= now;
-
-    const endOk =
-      !ad.end_date ||
-      new Date(ad.end_date) >= now;
-
-    const positionOk =
-      ad.position === 'homepage' ||
-      ad.position === 'both';
-
-    return startOk && endOk && positionOk;
+    return startOk && endOk;
   });
 
+  const featured =
+    featuredRaw.length > 0
+      ? featuredRaw
+      : articles.slice(0, 6);
+
   return {
-    articles: articles || [],
-    featured: featured || [],
-    mostRead: mostRead || [],
-    breakingNews: breakingNews || [],
-    advertisements: activeAdvertisements,
+    articles,
+    featured,
+    mostRead,
+    breakingNews,
+    activeAds,
   };
 }
 
 /* =========================================================
-   ANA SƏHİFƏ
+   HELPERS
+========================================================= */
+
+function SectionTitle({ title, href = '/xeberler' }) {
+  return (
+    <div className="mb-5 flex items-end justify-between border-b border-slate-200 pb-3">
+      <div>
+        <h2 className="text-[21px] font-bold tracking-tight text-[#102A43]">
+          {title}
+        </h2>
+
+        <div className="mt-1 h-[3px] w-10 bg-[#1D4E89]" />
+      </div>
+
+      <Link
+        href={href}
+        className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 transition-colors hover:text-[#1D4E89]"
+      >
+        Hamısına bax →
+      </Link>
+    </div>
+  );
+}
+
+function EmptyNews() {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-400">
+      Hazırda bu bölmədə xəbər yoxdur.
+    </div>
+  );
+}
+
+/* =========================================================
+   CATEGORY SECTION
+========================================================= */
+
+function CategorySection({ title, category, articles }) {
+  if (!articles.length) return null;
+
+  return (
+    <section className="mb-12">
+      <SectionTitle
+        title={title}
+        href={`/kateqoriya/${category}`}
+      />
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {articles.map((article) => (
+          <ArticleCard
+            key={article.id}
+            article={article}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   VIDEO SECTION
+========================================================= */
+
+function VideoSection({ articles }) {
+  if (!articles.length) return null;
+
+  return (
+    <section className="mb-12">
+      <SectionTitle
+        title="Video xəbərlər"
+        href="/video"
+      />
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {articles.map((article) => (
+          <Link
+            key={article.id}
+            href={`/article/${article.slug}`}
+            className="group block overflow-hidden rounded-xl border border-slate-200 bg-white"
+          >
+            <div className="relative aspect-video overflow-hidden bg-slate-900">
+              {article.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={article.image_url}
+                  alt={article.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-white/30">
+                  PANORAMA
+                </div>
+              )}
+
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-[#102A43] shadow-lg transition-transform group-hover:scale-110">
+                  ▶
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#1D4E89]">
+                VİDEO
+              </div>
+
+              <h3 className="line-clamp-2 text-[16px] font-bold leading-snug text-[#102A43] group-hover:text-[#1D4E89]">
+                {article.title}
+              </h3>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   AD BANNER
+========================================================= */
+
+function AdvertisementBanner() {
+  return (
+    <div className="relative mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#0F2742] via-[#173B61] to-[#1D4E89] shadow-sm">
+      {/* dekorativ dairələr */}
+      <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/5" />
+      <div className="absolute -bottom-14 -left-10 h-28 w-28 rounded-full bg-white/5" />
+
+      <div className="relative z-10 p-6">
+        <div className="mb-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1">
+          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/80">
+            REKLAM
+          </span>
+        </div>
+
+        <h3 className="text-[21px] font-bold leading-tight text-white">
+          Sizin reklamınız burada
+        </h3>
+
+        <p className="mt-2 text-[12px] leading-relaxed text-white/65">
+          Brendinizi PANORAMA XƏBƏR-in geniş auditoriyasına təqdim edin.
+        </p>
+
+        <a
+          href="https://wa.me/994553737900"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#173B61] transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+        >
+          Reklam yerləşdir
+          <span className="text-base leading-none">
+            →
+          </span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   TELEGRAM
+========================================================= */
+
+function TelegramBanner() {
+  return (
+    <section className="mb-12 overflow-hidden rounded-2xl bg-[#102A43]">
+      <div className="relative px-6 py-8 text-center sm:px-10">
+        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/5" />
+        <div className="absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/5" />
+
+        <div className="relative z-10">
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+            PANORAMA XƏBƏR
+          </div>
+
+          <h2 className="text-2xl font-bold text-white">
+            Xəbərləri Telegram-da izləyin
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-xl text-sm text-white/60">
+            Ən son xəbərlərdən operativ xəbərdar olmaq üçün
+            Telegram kanalımıza qoşulun.
+          </p>
+
+          <a
+            href="https://t.me/panoramaxeberinfoaz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center rounded-lg bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#102A43] transition hover:bg-slate-100"
+          >
+            Telegram kanalına qoşul →
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   PAGE
 ========================================================= */
 
 export default async function HomePage() {
@@ -104,510 +288,335 @@ export default async function HomePage() {
     featured,
     mostRead,
     breakingNews,
-    advertisements,
+    activeAds,
   } = await getData();
 
-  /* =======================================================
-     BAŞ XƏBƏRLƏR
-  ======================================================= */
-
-  const featuredArticles =
-    featured.length > 0
-      ? featured
-      : articles.slice(0, 6);
-
   const featuredIds = new Set(
-    featuredArticles.map((article) => article.id)
+    featured.map((article) => article.id)
   );
-
-  const remaining = articles.filter(
-    (article) => !featuredIds.has(article.id)
-  );
-
-  /* =======================================================
-     REKLAM
-  ======================================================= */
-
-  const homepageAd =
-    advertisements?.[0] || null;
-
-  /* =======================================================
-     GÜNÜN SEÇİMİ
-  ======================================================= */
-
-  const sideNews = remaining.slice(0, 5);
-
-  /* =======================================================
-     GÜNDƏM
-  ======================================================= */
-
-  const gündəmNews = remaining
-    .filter(
-      (article) =>
-        !article.video_url &&
-        !featuredIds.has(article.id)
-    )
-    .slice(0, 10);
-
-  /* =======================================================
-     DİGƏR XƏBƏRLƏR
-  ======================================================= */
-
-  const lowerNews = remaining
-    .filter(
-      (article) =>
-        !article.video_url &&
-        !featuredIds.has(article.id)
-    )
-    .slice(10, 18);
-
-  /* =======================================================
-     VİDEO
-  ======================================================= */
 
   const videoNews = articles
-    .filter(
-      (article) =>
-        article.video_url &&
-        article.video_url.trim() !== ''
-    )
+    .filter((article) => article.video_url)
     .slice(0, 6);
 
-  /* =======================================================
-     KATEQORİYA XƏBƏRLƏRİ
-  ======================================================= */
+  const nonVideo = articles.filter(
+    (article) => !article.video_url
+  );
 
-  const getCategoryNews = (category, limit = 4) =>
+  const sideNews = nonVideo
+    .filter((article) => !featuredIds.has(article.id))
+    .slice(0, 5);
+
+  const gündəmNews = nonVideo
+    .filter((article) => !featuredIds.has(article.id))
+    .slice(5, 15);
+
+  const lowerNews = nonVideo
+    .filter((article) => !featuredIds.has(article.id))
+    .slice(15, 23);
+
+  const categoryNews = (category) =>
     articles
       .filter(
         (article) =>
           article.category === category &&
-          !featuredIds.has(article.id) &&
-          !article.video_url
+          !featuredIds.has(article.id)
       )
-      .slice(0, limit);
+      .slice(0, 4);
 
-  const politics = getCategoryNews('siyaset', 4);
-
-  const economy = getCategoryNews(
-    'iqtisadiyyat',
-    4
-  );
-
-  const society = getCategoryNews(
-    'cemiyyet',
-    4
-  );
-
-  const world = getCategoryNews(
-    'dunya',
-    4
-  );
-
-  const sport = getCategoryNews(
-    'idman',
-    4
-  );
-
-  const culture = getCategoryNews(
-    'medeniyyet',
-    4
-  );
-
-  const technology = getCategoryNews(
-    'texnologiya',
-    4
+  const activeTopAd = activeAds.find(
+    (ad) =>
+      ad.position === 'homepage' ||
+      ad.position === 'both' ||
+      !ad.position
   );
 
   return (
     <main className="bg-white">
 
       {/* =====================================================
-          SON DƏQİQƏ
+          SON DƏQİQƏ / XƏBƏR AXINI
       ===================================================== */}
 
-      <NewsTicker
-        articles={breakingNews}
-      />
+      <NewsTicker articles={breakingNews} />
 
       {/* =====================================================
-          BAŞ XƏBƏR + GÜNÜN SEÇİMİ
+          HERO
       ===================================================== */}
 
-      {featuredArticles.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 pt-5 sm:pt-6">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
 
-          <div className="grid lg:grid-cols-[1.8fr_1fr] gap-5 lg:gap-6">
-
-            {/* BAŞ XƏBƏR */}
-
-            <HeroSlider
-              articles={featuredArticles}
-            />
-
-            {/* GÜNÜN SEÇİMİ */}
-
-            <aside className="border border-gray-200 bg-white">
-
-              <div className="px-5 py-5 border-b border-gray-200">
-
-                <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-                  PANORAMA XƏBƏR
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-
-                  <h2 className="text-xl font-bold text-[#172b4d]">
-                    Günün seçimi
-                  </h2>
-
-                  <span className="text-[9px] font-bold text-gray-400">
-                    01—05
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div>
-                {sideNews.map((article, index) => (
-                  <Link
-                    key={article.id}
-                    href={`/article/${article.slug}`}
-                    className="group flex gap-3 p-3.5 sm:p-4 border-b border-gray-200 last:border-0"
-                  >
-
-                    <div className="relative w-[100px] h-[68px] sm:w-[108px] sm:h-[74px] flex-none overflow-hidden bg-gray-100">
-
-                      {article.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={article.image_url}
-                          alt={article.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-400">
-                          PANORAMA
-                        </div>
-                      )}
-
-                      <span className="absolute top-1 left-1 bg-[#172b4d] text-white text-[9px] font-bold px-1.5 py-0.5">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-
-                    </div>
-
-                    <div className="min-w-0">
-
-                      <div
-                        className="text-[9px] font-bold uppercase mb-1"
-                        style={{
-                          color: categoryColor(
-                            article.category
-                          ),
-                        }}
-                      >
-                        {categoryName(
-                          article.category
-                        )}
-                      </div>
-
-                      <h3 className="text-[13px] font-semibold leading-snug line-clamp-3 group-hover:text-[#1D4E89] transition-colors">
-                        {article.title}
-                      </h3>
-
-                    </div>
-
-                  </Link>
-                ))}
-              </div>
-
-            </aside>
-
+          {/* HERO SLIDER */}
+          <div className="overflow-hidden rounded-2xl">
+            <HeroSlider articles={featured} />
           </div>
 
+          {/* GÜNÜN SEÇİMİ */}
+          <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+            <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D4E89]">
+                  PANORAMA
+                </div>
+
+                <h2 className="mt-1 text-[20px] font-bold text-[#102A43]">
+                  Günün seçimi
+                </h2>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {sideNews.map((article, index) => (
+                <Link
+                  key={article.id}
+                  href={`/article/${article.slug}`}
+                  className="group flex gap-3"
+                >
+                  <div className="relative h-[76px] w-[96px] flex-none overflow-hidden rounded-lg bg-slate-100">
+                    {article.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={article.image_url}
+                        alt={article.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[9px] text-slate-400">
+                        ŞƏKİL YOXDUR
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="mb-1 text-[9px] font-bold text-[#1D4E89]">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
+
+                    <h3 className="line-clamp-3 text-[13px] font-semibold leading-snug text-[#263A4D] group-hover:text-[#1D4E89]">
+                      {article.title}
+                    </h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {/* =====================================================
+          TOP REKLAM
+      ===================================================== */}
+
+      {activeTopAd && (
+        <section className="mx-auto max-w-7xl px-4 pb-7 sm:px-6 lg:px-8">
+          <a
+            href={activeTopAd.link_url || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+          >
+            {activeTopAd.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={activeTopAd.image_url}
+                alt={activeTopAd.title || 'Reklam'}
+                className="h-auto max-h-[180px] w-full object-cover"
+              />
+            ) : (
+              <div className="flex min-h-[110px] items-center justify-center text-sm text-slate-400">
+                {activeTopAd.title || 'Reklam'}
+              </div>
+            )}
+          </a>
         </section>
       )}
 
       {/* =====================================================
-          REKLAM
+          GÜNDƏM + ƏN ÇOX OXUNANLAR
       ===================================================== */}
 
-      <section className="max-w-7xl mx-auto px-4 py-5">
-
-        {homepageAd ? (
-          <a
-            href={homepageAd.link_url || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block border border-gray-200 bg-gray-50 overflow-hidden"
-          >
-
-            {homepageAd.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={homepageAd.image_url}
-                alt={
-                  homepageAd.title ||
-                  'PANORAMA XƏBƏR reklam'
-                }
-                className="w-full max-h-[145px] object-cover"
-              />
-            ) : (
-              <div className="h-[90px] flex items-center justify-center text-xs text-gray-400">
-                {homepageAd.title ||
-                  'Reklam'}
-              </div>
-            )}
-
-          </a>
-        ) : (
-          <div className="relative h-[82px] border border-dashed border-gray-300 bg-[#f8fafc] flex items-center justify-center overflow-hidden">
-
-            <div className="absolute inset-0 opacity-[0.025] text-[80px] font-black text-[#172b4d] flex items-center justify-center">
-              PANORAMA
-            </div>
-
-            <div className="relative text-center">
-
-              <div className="text-[9px] uppercase tracking-[0.25em] text-gray-400 mb-1">
-                Reklam
-              </div>
-
-              <div className="text-sm font-semibold text-[#172b4d]">
-                Sizin reklamınız burada
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-      </section>
-
-      {/* =====================================================
-          GÜNDƏM + ƏN ÇOX OXUNAN
-      ===================================================== */}
-
-      <section className="max-w-7xl mx-auto px-4 py-7">
-
-        <div className="grid lg:grid-cols-[2fr_0.9fr] gap-8">
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_330px]">
 
           {/* GÜNDƏM */}
-
           <div>
-
             <SectionTitle
               title="Gündəm"
-              href="/"
-              subtitle="Günün əsas xəbərləri"
+              href="/xeberler"
             />
 
             {gündəmNews.length > 0 ? (
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-8">
-
+              <div className="grid gap-5 sm:grid-cols-2">
                 {gündəmNews.map((article) => (
                   <ArticleCard
                     key={article.id}
                     article={article}
                   />
                 ))}
-
               </div>
             ) : (
               <EmptyNews />
             )}
-
           </div>
 
-          {/* ƏN ÇOX OXUNAN */}
-
+          {/* SAĞ SÜTUN */}
           <aside>
 
-            <div className="border border-gray-200 bg-white">
+            {/* ƏN ÇOX OXUNANLAR */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-              <div className="bg-[#172b4d] text-white px-5 py-4">
-
-                <div className="text-[9px] uppercase tracking-[0.2em] text-white/50 mb-1">
-                  Oxucuların seçimi
+              <div className="mb-5 border-b border-slate-200 pb-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D4E89]">
+                  OXUNMA GÖSTƏRİCİLƏRİ
                 </div>
 
-                <h2 className="font-bold text-lg">
+                <h2 className="mt-1 text-[20px] font-bold text-[#102A43]">
                   Ən çox oxunanlar
                 </h2>
-
               </div>
 
-              {mostRead.length > 0 ? (
-                mostRead.map((article, index) => (
+              <div className="space-y-4">
+                {mostRead.map((article, index) => (
                   <Link
                     key={article.id}
                     href={`/article/${article.slug}`}
-                    className="group flex gap-3 p-4 border-b border-gray-200 last:border-none"
+                    className="group flex gap-3"
                   >
-
-                    <span className="text-2xl font-bold text-gray-300 w-8 flex-none">
-                      {String(index + 1).padStart(
-                        2,
-                        '0'
-                      )}
-                    </span>
+                    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#F1F5F9] text-[12px] font-bold text-[#1D4E89] group-hover:bg-[#1D4E89] group-hover:text-white">
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
 
                     <div className="min-w-0">
-
-                      <div
-                        className="text-[9px] font-bold uppercase mb-1"
-                        style={{
-                          color:
-                            categoryColor(
-                              article.category
-                            ),
-                        }}
-                      >
-                        {categoryName(
-                          article.category
-                        )}
-                      </div>
-
-                      <h3 className="text-[13px] font-semibold leading-snug group-hover:text-[#1D4E89] transition-colors">
+                      <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#263A4D] group-hover:text-[#1D4E89]">
                         {article.title}
                       </h3>
 
-                      <div className="text-[10px] text-gray-400 mt-2">
+                      <div className="mt-1 text-[10px] text-slate-400">
                         {article.views || 0} baxış
                       </div>
-
                     </div>
-
                   </Link>
-                ))
-              ) : (
-                <EmptyNews />
-              )}
-
+                ))}
+              </div>
             </div>
 
+            {/* =================================================
+                REKLAM BANNERİ
+            ================================================= */}
+
+            <AdvertisementBanner />
+
           </aside>
-
         </div>
-
       </section>
 
       {/* =====================================================
           SİYASƏT
       ===================================================== */}
 
-      {politics.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="Siyasət"
-          slug="siyaset"
-          articles={politics}
-          eyebrow="GÜNDƏMİN SİYASİ XƏBƏRLƏRİ"
+          category="siyaset"
+          articles={categoryNews('siyaset')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           İQTİSADİYYAT
       ===================================================== */}
 
-      {economy.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="İqtisadiyyat"
-          slug="iqtisadiyyat"
-          articles={economy}
-          eyebrow="İQTİSADİ GÜNDƏM"
+          category="iqtisadiyyat"
+          articles={categoryNews('iqtisadiyyat')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           CƏMİYYƏT
       ===================================================== */}
 
-      {society.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="Cəmiyyət"
-          slug="cemiyyet"
-          articles={society}
-          eyebrow="CƏMİYYƏT XƏBƏRLƏRİ"
+          category="cemiyyet"
+          articles={categoryNews('cemiyyet')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           DÜNYA
       ===================================================== */}
 
-      {world.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="Dünya"
-          slug="dunya"
-          articles={world}
-          eyebrow="DÜNYA GÜNDƏMİ"
+          category="dunya"
+          articles={categoryNews('dunya')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           İDMAN
       ===================================================== */}
 
-      {sport.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="İdman"
-          slug="idman"
-          articles={sport}
-          eyebrow="İDMAN XƏBƏRLƏRİ"
+          category="idman"
+          articles={categoryNews('idman')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           MƏDƏNİYYƏT
       ===================================================== */}
 
-      {culture.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="Mədəniyyət"
-          slug="medeniyyet"
-          articles={culture}
-          eyebrow="MƏDƏNİYYƏT XƏBƏRLƏRİ"
+          category="medeniyyet"
+          articles={categoryNews('medeniyyet')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           TEXNOLOGİYA
       ===================================================== */}
 
-      {technology.length > 0 && (
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <CategorySection
           title="Texnologiya"
-          slug="texnologiya"
-          articles={technology}
-          eyebrow="TEXNOLOGİYA XƏBƏRLƏRİ"
+          category="texnologiya"
+          articles={categoryNews('texnologiya')}
         />
-      )}
+      </section>
 
       {/* =====================================================
           DİGƏR XƏBƏRLƏR
       ===================================================== */}
 
       {lowerNews.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 py-9">
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <section className="mb-12">
+            <SectionTitle
+              title="Digər xəbərlər"
+              href="/xeberler"
+            />
 
-          <SectionTitle
-            title="Digər xəbərlər"
-            subtitle="Son yeniliklər"
-          />
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
-            {lowerNews.map((article) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-              />
-            ))}
-
-          </div>
-
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {lowerNews.map((article) => (
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                />
+              ))}
+            </div>
+          </section>
         </section>
       )}
 
@@ -615,400 +624,80 @@ export default async function HomePage() {
           VİDEO XƏBƏRLƏR
       ===================================================== */}
 
-      {videoNews.length > 0 && (
-        <VideoSection
-          articles={videoNews}
-        />
-      )}
-
-      {/* =====================================================
-          FOTO / VİDEO
-      ===================================================== */}
-
-      <section className="max-w-7xl mx-auto px-4 py-9">
-
-        <div className="grid md:grid-cols-2 gap-5">
-
-          {/* FOTO */}
-
-          <Link
-            href="/foto"
-            className="group relative overflow-hidden bg-[#172b4d] min-h-[210px] p-7"
-          >
-
-            <div className="absolute right-5 bottom-[-30px] text-[130px] font-black text-white/5">
-              FOTO
-            </div>
-
-            <div className="relative">
-
-              <div className="text-[10px] uppercase tracking-[0.2em] text-white/45 mb-3">
-                PANORAMA
-              </div>
-
-              <h2 className="text-2xl font-bold text-white">
-                Foto xəbərlər
-              </h2>
-
-              <p className="text-sm text-white/60 mt-2 max-w-sm">
-                Azərbaycandan və dünyadan
-                ən maraqlı görüntülər.
-              </p>
-
-              <span className="inline-block mt-6 text-xs font-bold text-white">
-                Fotolara bax →
-              </span>
-
-            </div>
-
-          </Link>
-
-          {/* VİDEO */}
-
-          <Link
-            href="/video"
-            className="group relative overflow-hidden bg-[#f1f5f9] min-h-[210px] p-7"
-          >
-
-            <div className="absolute right-5 bottom-[-30px] text-[130px] font-black text-gray-200">
-              VIDEO
-            </div>
-
-            <div className="relative">
-
-              <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-3">
-                PANORAMA
-              </div>
-
-              <h2 className="text-2xl font-bold text-[#172b4d]">
-                Video xəbərlər
-              </h2>
-
-              <p className="text-sm text-gray-500 mt-2 max-w-sm">
-                Günün ən vacib video xəbərləri.
-              </p>
-
-              <span className="inline-block mt-6 text-xs font-bold text-[#172b4d]">
-                Videolara bax →
-              </span>
-
-            </div>
-
-          </Link>
-
-        </div>
-
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <VideoSection articles={videoNews} />
       </section>
 
       {/* =====================================================
-          TELEGRAM + REKLAM
+          FOTO / VİDEO KEÇİDİ
       ===================================================== */}
 
-      <section className="max-w-7xl mx-auto px-4 pb-10">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="mb-12">
+          <div className="grid gap-5 md:grid-cols-2">
 
-        <div className="border border-gray-200 bg-[#f7f8fa] p-6 md:p-8">
+            <Link
+              href="/foto"
+              className="group relative overflow-hidden rounded-2xl bg-[#102A43] p-7"
+            >
+              <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-white/5" />
 
-          <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="relative z-10">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
+                  PANORAMA
+                </div>
 
-            <div>
+                <h3 className="mt-2 text-2xl font-bold text-white">
+                  Foto xəbərlər
+                </h3>
 
-              <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">
-                PANORAMA XƏBƏR
+                <p className="mt-2 text-sm text-white/60">
+                  Hadisələrdən ən maraqlı görüntülər.
+                </p>
+
+                <div className="mt-5 text-[11px] font-bold uppercase tracking-wider text-white">
+                  Fotolara bax →
+                </div>
               </div>
+            </Link>
 
-              <h3 className="text-xl md:text-2xl font-bold text-[#172b4d]">
-                Xəbərləri Telegram-da izləyin
-              </h3>
+            <Link
+              href="/video"
+              className="group relative overflow-hidden rounded-2xl bg-[#1D4E89] p-7"
+            >
+              <div className="absolute -bottom-10 -right-5 h-36 w-36 rounded-full bg-white/5" />
 
-              <p className="text-sm text-gray-500 mt-2 max-w-xl">
-                Ən son xəbərlər, gündəm və vacib
-                yenilikləri birbaşa Telegram kanalımızdan
-                izləyin.
-              </p>
+              <div className="relative z-10">
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
+                  PANORAMA
+                </div>
 
-            </div>
+                <h3 className="mt-2 text-2xl font-bold text-white">
+                  Video xəbərlər
+                </h3>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+                <p className="mt-2 text-sm text-white/60">
+                  Ən son hadisələri videolarda izləyin.
+                </p>
 
-              <a
-                href="https://t.me/panoramaxeberinfoaz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-[#229ED9] text-white px-6 py-3 text-sm font-semibold text-center hover:bg-[#1688c1] transition-colors"
-              >
-                Telegram kanalına qoşul →
-              </a>
-
-              <a
-                href="https://wa.me/994553737900?text=Salam%2C%20saytınızda%20reklam%20yerləşdirmək%20istəyirəm"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-[#172b4d] text-white px-6 py-3 text-sm font-semibold text-center hover:bg-[#1D4E89] transition-colors"
-              >
-                Reklam üçün əlaqə →
-              </a>
-
-            </div>
+                <div className="mt-5 text-[11px] font-bold uppercase tracking-wider text-white">
+                  Videolara bax →
+                </div>
+              </div>
+            </Link>
 
           </div>
+        </section>
+      </section>
 
-        </div>
+      {/* =====================================================
+          TELEGRAM
+      ===================================================== */}
 
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <TelegramBanner />
       </section>
 
     </main>
-  );
-}
-
-/* =========================================================
-   VİDEO BÖLMƏSİ
-========================================================= */
-
-function VideoSection({ articles }) {
-  return (
-    <section className="bg-[#f7f8fa] border-y border-gray-200">
-
-      <div className="max-w-7xl mx-auto px-4 py-9">
-
-        <div className="flex items-center gap-4 mb-6">
-
-          <div>
-
-            <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-              PANORAMA
-            </div>
-
-            <h2 className="text-2xl font-bold text-[#172b4d]">
-              Video xəbərlər
-            </h2>
-
-          </div>
-
-          <div className="h-[2px] flex-1 bg-[#172b4d]" />
-
-          <Link
-            href="/video"
-            className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors"
-          >
-            Hamısı →
-          </Link>
-
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
-          {articles.map((article) => (
-
-            <div
-              key={article.id}
-              className="bg-white border border-gray-200 overflow-hidden group"
-            >
-
-              <div className="relative bg-black aspect-video">
-
-                <video
-                  src={article.video_url}
-                  controls
-                  preload="metadata"
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-
-                <div className="absolute top-3 left-3 pointer-events-none">
-
-                  <span className="bg-red-600 text-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">
-                    ▶ Video
-                  </span>
-
-                </div>
-
-              </div>
-
-              <div className="p-4">
-
-                <div className="flex items-center justify-between gap-3 mb-2">
-
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-widest"
-                    style={{
-                      color: categoryColor(
-                        article.category
-                      ),
-                    }}
-                  >
-                    {categoryName(
-                      article.category
-                    )}
-                  </span>
-
-                  {article.created_at && (
-                    <span className="text-[10px] text-gray-400">
-                      {new Date(
-                        article.created_at
-                      ).toLocaleDateString(
-                        'az-AZ'
-                      )}
-                    </span>
-                  )}
-
-                </div>
-
-                <Link
-                  href={`/article/${article.slug}`}
-                >
-
-                  <h3 className="text-[17px] font-bold leading-[1.3] text-[#111827] line-clamp-3 hover:text-[#2563eb] transition-colors">
-                    {article.title}
-                  </h3>
-
-                </Link>
-
-                {article.excerpt && (
-                  <p className="mt-2 text-[13px] leading-relaxed text-gray-500 line-clamp-2">
-                    {article.excerpt}
-                  </p>
-                )}
-
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-
-                  <span className="text-[10px] text-gray-400">
-                    {article.source ||
-                      'PANORAMA Xəbər'}
-                  </span>
-
-                  <Link
-                    href={`/article/${article.slug}`}
-                    className="text-[10px] font-bold uppercase tracking-wider text-[#172b4d] hover:text-[#2563eb]"
-                  >
-                    Xəbəri oxu →
-                  </Link>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-    </section>
-  );
-}
-
-/* =========================================================
-   BÖLMƏ BAŞLIĞI
-========================================================= */
-
-function SectionTitle({
-  title,
-  href,
-  subtitle,
-}) {
-  return (
-    <div className="flex items-end gap-4 mb-6">
-
-      <div className="min-w-0">
-
-        <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-          {subtitle || 'PANORAMA XƏBƏR'}
-        </div>
-
-        <h2 className="text-2xl font-bold text-[#172b4d]">
-          {title}
-        </h2>
-
-      </div>
-
-      <div className="h-[2px] flex-1 bg-[#172b4d] mb-2" />
-
-      {href && (
-        <Link
-          href={href}
-          className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors mb-1"
-        >
-          Hamısı →
-        </Link>
-      )}
-
-    </div>
-  );
-}
-
-/* =========================================================
-   KATEQORİYA BÖLMƏSİ
-========================================================= */
-
-function CategorySection({
-  title,
-  slug,
-  articles,
-  eyebrow,
-}) {
-  return (
-    <section className="bg-[#f7f8fa] border-y border-gray-200">
-
-      <div className="max-w-7xl mx-auto px-4 py-9">
-
-        <div className="flex items-end gap-4 mb-6">
-
-          <div className="min-w-0">
-
-            <div className="text-[9px] uppercase tracking-[0.2em] text-gray-400 mb-1">
-              {eyebrow || 'PANORAMA'}
-            </div>
-
-            <h2 className="text-2xl font-bold text-[#172b4d]">
-              {title}
-            </h2>
-
-          </div>
-
-          <div className="h-[2px] flex-1 bg-[#172b4d] mb-2" />
-
-          <Link
-            href={`/${slug}`}
-            className="text-xs font-semibold text-[#1D4E89] whitespace-nowrap hover:text-[#172b4d] transition-colors mb-1"
-          >
-            Daha çox →
-          </Link>
-
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
-          {articles.map((article) => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-            />
-          ))}
-
-        </div>
-
-      </div>
-
-    </section>
-  );
-}
-
-/* =========================================================
-   BOŞ XƏBƏR
-========================================================= */
-
-function EmptyNews() {
-  return (
-    <div className="border border-dashed border-gray-200 bg-gray-50 px-5 py-10 text-center">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400">
-        PANORAMA XƏBƏR
-      </div>
-
-      <p className="text-sm text-gray-400 mt-2">
-        Hələ bu bölmədə xəbər əlavə edilməyib.
-      </p>
-    </div>
   );
 }
