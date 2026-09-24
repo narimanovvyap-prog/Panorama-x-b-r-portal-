@@ -91,7 +91,6 @@ export default async function ArticlePage({ params }) {
     article_id: article.id,
   });
 
-  // Cari baxış sayını göstər
   const currentViews = Number(article.views || 0) + 1;
 
   // ==========================================
@@ -128,6 +127,21 @@ export default async function ArticlePage({ params }) {
         minute: '2-digit',
       })
     : '';
+
+  // ==========================================
+  // PAYLAŞIM LİNKLƏRİ
+  // ==========================================
+
+  const articleUrl = `https://panoramaxeber.info.az/article/${article.slug}`;
+
+  const encodedUrl = encodeURIComponent(articleUrl);
+  const encodedTitle = encodeURIComponent(article.title || 'PANORAMA XƏBƏR');
+
+  const telegramShareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`;
+
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+    `${article.title || 'PANORAMA XƏBƏR'}\n\n${articleUrl}`
+  )}`;
 
   return (
     <main className="min-h-screen bg-white">
@@ -218,8 +232,6 @@ export default async function ArticlePage({ params }) {
           "
         >
 
-          {/* Mənbə */}
-
           {article.source && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span className="font-medium">
@@ -232,15 +244,11 @@ export default async function ArticlePage({ params }) {
             </div>
           )}
 
-          {/* Ayırıcı */}
-
           {article.source && publishedDate && (
             <span className="hidden sm:block text-gray-300">
               •
             </span>
           )}
-
-          {/* Tarix */}
 
           {publishedDate && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -253,8 +261,6 @@ export default async function ArticlePage({ params }) {
               </span>
             </div>
           )}
-
-          {/* Saat */}
 
           {publishedDate && (
             <>
@@ -273,8 +279,6 @@ export default async function ArticlePage({ params }) {
               </div>
             </>
           )}
-
-          {/* Baxış */}
 
           <span className="hidden sm:block text-gray-300">
             •
@@ -346,10 +350,110 @@ export default async function ArticlePage({ params }) {
         />
 
         {/* ==========================================
+            PAYLAŞ
+        ========================================== */}
+
+        <div className="mt-10 border-y border-gray-200 py-6">
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+
+            {/* Başlıq */}
+
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                Xəbəri paylaş
+              </div>
+
+              <div className="mt-1 text-sm font-semibold text-gray-800">
+                Bu xəbəri dostlarınızla paylaşın
+              </div>
+            </div>
+
+            {/* Düymələr */}
+
+            <div className="flex flex-wrap items-center gap-2">
+
+              {/* Telegram */}
+
+              <a
+                href={telegramShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Telegram-da paylaş"
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  bg-[#229ED9]
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-bold
+                  text-white
+                  shadow-sm
+                  transition
+                  hover:-translate-y-0.5
+                  hover:shadow-md
+                "
+              >
+                <span className="text-base">
+                  ✈
+                </span>
+
+                <span>
+                  Telegram
+                </span>
+              </a>
+
+              {/* WhatsApp */}
+
+              <a
+                href={whatsappShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp-da paylaş"
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  bg-[#25D366]
+                  px-4
+                  py-2.5
+                  text-sm
+                  font-bold
+                  text-white
+                  shadow-sm
+                  transition
+                  hover:-translate-y-0.5
+                  hover:shadow-md
+                "
+              >
+                <span className="text-base">
+                  ☎
+                </span>
+
+                <span>
+                  WhatsApp
+                </span>
+              </a>
+
+              {/* Linki kopyala */}
+
+              <CopyLinkButton articleUrl={articleUrl} />
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* ==========================================
             TELEGRAM KANAL BLOKU
         ========================================== */}
 
-        <div className="mt-12">
+        <div className="mt-10">
 
           <div
             className="
@@ -365,8 +469,6 @@ export default async function ArticlePage({ params }) {
               shadow-lg
             "
           >
-
-            {/* Dekorativ dairələr */}
 
             <div
               className="
@@ -394,8 +496,6 @@ export default async function ArticlePage({ params }) {
               "
             />
 
-            {/* Kontent */}
-
             <div
               className="
                 relative
@@ -408,8 +508,6 @@ export default async function ArticlePage({ params }) {
               "
             >
 
-              {/* Sol hissə */}
-
               <div
                 className="
                   flex
@@ -419,8 +517,6 @@ export default async function ArticlePage({ params }) {
                   sm:text-left
                 "
               >
-
-                {/* Telegram ikon */}
 
                 <div
                   className="
@@ -441,8 +537,6 @@ export default async function ArticlePage({ params }) {
                     ✈️
                   </span>
                 </div>
-
-                {/* Mətn */}
 
                 <div>
                   <p
@@ -468,8 +562,6 @@ export default async function ArticlePage({ params }) {
                 </div>
 
               </div>
-
-              {/* Telegram düyməsi */}
 
               <a
                 href="https://t.me/panoramaxeberinfoaz"
@@ -528,8 +620,6 @@ export default async function ArticlePage({ params }) {
           "
         >
 
-          {/* Sol məlumat */}
-
           <div
             className="
               flex
@@ -553,8 +643,6 @@ export default async function ArticlePage({ params }) {
 
           </div>
 
-          {/* Ana səhifə */}
-
           <Link
             href="/"
             className="
@@ -576,5 +664,49 @@ export default async function ArticlePage({ params }) {
       </article>
 
     </main>
+  );
+}
+
+/* =========================================================
+   LINKİ KOPYALA DÜYMƏSİ
+========================================================= */
+
+function CopyLinkButton({ articleUrl }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(articleUrl);
+        }
+      }}
+      className="
+        inline-flex
+        items-center
+        gap-2
+        rounded-xl
+        bg-gray-100
+        px-4
+        py-2.5
+        text-sm
+        font-bold
+        text-gray-700
+        border
+        border-gray-200
+        shadow-sm
+        transition
+        hover:-translate-y-0.5
+        hover:bg-gray-200
+        hover:shadow-md
+      "
+    >
+      <span className="text-base">
+        🔗
+      </span>
+
+      <span>
+        Linki kopyala
+      </span>
+    </button>
   );
 }
