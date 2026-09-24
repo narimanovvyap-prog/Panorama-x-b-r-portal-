@@ -568,43 +568,58 @@ export default async function HomePage() {
       </section>
 
       {/* ================================
-          ƏMƏKDAŞLIQ
+          ƏMƏKDAŞLIQ VƏ TELEGRAM
       ================================= */}
 
       <section className="max-w-7xl mx-auto px-4 pb-10">
 
-        <div className="border border-gray-200 bg-[#f7f8fa] p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div className="border border-gray-200 bg-[#f7f8fa] p-6 md:p-7">
 
-          <div>
+          <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
 
-            <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">
-              ƏMƏKDAŞLIQ
+            <div>
+
+              <div className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2">
+                PANORAMA XƏBƏR
+              </div>
+
+              <h3 className="text-xl font-bold text-[#172b4d]">
+                Xəbərləri Telegram-da izləyin
+              </h3>
+
+              <p className="text-sm text-gray-500 mt-1">
+                Ən son xəbərlər, gündəm və vacib yeniliklər birbaşa Telegram kanalımızda.
+              </p>
+
             </div>
 
-            <h3 className="text-xl font-bold text-[#172b4d]">
-              PANORAMA-da reklam yerləşdirin
-            </h3>
+            <div className="flex flex-col sm:flex-row gap-3">
 
-            <p className="text-sm text-gray-500 mt-1">
-              Reklam və əməkdaşlıq üçün
-              bizimlə əlaqə saxlayın.
-            </p>
+              <a
+                href="https://t.me/panoramaxeberinfoaz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#229ED9] text-white px-6 py-3 text-sm font-semibold text-center hover:bg-[#1688c1] transition-colors"
+              >
+                Telegram kanalına qoşul →
+              </a>
+
+              <a
+                href="https://wa.me/994553737900?text=Salam%2C%20saytınızda%20reklam%20yerləşdirmək%20istəyirəm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#172b4d] text-white px-6 py-3 text-sm font-semibold text-center hover:bg-[#1D4E89] transition-colors"
+              >
+                Reklam üçün əlaqə →
+              </a>
+
+            </div>
 
           </div>
-
-          <a
-            href="https://wa.me/994553737900?text=Salam%2C%20saytınızda%20reklam%20yerləşdirmək%20istəyirəm"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#172b4d] text-white px-6 py-3 text-sm font-semibold hover:bg-[#1D4E89] transition-colors"
-          >
-            Əlaqə saxla →
-          </a>
 
         </div>
 
       </section>
-
     </main>
   );
 }
