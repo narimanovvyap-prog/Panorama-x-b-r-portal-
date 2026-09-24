@@ -1,37 +1,113 @@
 import Link from 'next/link';
 import { categoryName, categoryColor } from '@/lib/categories';
 
+function formatDate(date) {
+  if (!date) return '';
+
+  const d = new Date(date);
+
+  return new Intl.DateTimeFormat('az-AZ', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
 export default function ArticleCard({ article }) {
   return (
-    <Link href={`/article/${article.slug}`} className="group block">
-      <div className="aspect-[16/10] bg-ink2 mb-3 overflow-hidden">
+    <Link
+      href={`/article/${article.slug}`}
+      className="group block"
+    >
+      {/* ŞƏKİL */}
+      <div className="relative mb-3 aspect-[16/10] overflow-hidden rounded-xl bg-slate-100">
+
         {article.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={article.image_url}
-            alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+            alt={article.title || 'PANORAMA XƏBƏR'}
+            loading="lazy"
+            className="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
-            Şəkil yoxdur
+          <div className="flex h-full w-full items-center justify-center bg-[#102A43]">
+            <span className="text-xs font-bold tracking-[0.15em] text-white/30">
+              PANORAMA
+            </span>
           </div>
         )}
+
+        {/* Şəkil üzərində kateqoriya */}
+        <div className="absolute left-3 top-3">
+          <span
+            className="rounded-md bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] shadow-sm"
+            style={{
+              color: categoryColor(article.category),
+            }}
+          >
+            {categoryName(article.category)}
+          </span>
+        </div>
       </div>
+
+      {/* KATEQORİYA */}
       <div
-        className="font-mono text-[10.5px] font-semibold uppercase tracking-wider mb-1"
-        style={{ color: categoryColor(article.category) }}
+        className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.15em]"
+        style={{
+          color: categoryColor(article.category),
+        }}
       >
         {categoryName(article.category)}
       </div>
-      <h3 className="font-serif text-[17px] font-semibold leading-snug mb-1 group-hover:text-blue line-clamp-2">
+
+      {/* BAŞLIQ */}
+      <h3 className="line-clamp-2 text-[17px] font-bold leading-[1.3] tracking-[-0.01em] text-[#172B4D] transition-colors duration-200 group-hover:text-[#1D4E89]">
         {article.title}
       </h3>
+
+      {/* XÜLASƏ */}
       {article.excerpt && (
-        <p className="text-[12.5px] text-gray-500 line-clamp-2 mb-1">{article.excerpt}</p>
+        <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-slate-500">
+          {article.excerpt}
+        </p>
       )}
-      <div className="text-[11px] text-gray-400">
-        {article.source ? `Mənbə: ${article.source}` : ''}
+
+      {/* TARİX + SAAT + BAXIŞ */}
+      <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5 text-[10px] text-slate-400">
+
+        {article.created_at && (
+          <span>
+            {formatDate(article.created_at)}
+          </span>
+        )}
+
+        {article.created_at && article.views != null && (
+          <span className="text-slate-300">
+            •
+          </span>
+        )}
+
+        {article.views != null && (
+          <span className="flex items-center gap-1">
+            <span className="text-[10px]">◉</span>
+            {article.views}
+          </span>
+        )}
+
+        {article.source && (
+          <>
+            <span className="text-slate-300">
+              •
+            </span>
+
+            <span className="truncate">
+              {article.source}
+            </span>
+          </>
+        )}
+
       </div>
     </Link>
   );
