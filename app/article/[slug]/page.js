@@ -5,6 +5,10 @@ import Link from 'next/link';
 
 export const revalidate = 0;
 
+/* =========================================================
+   ARTICLE
+========================================================= */
+
 async function getArticle(slug) {
   const { data, error } = await supabase
     .from('articles')
@@ -16,6 +20,10 @@ async function getArticle(slug) {
 
   return data;
 }
+
+/* =========================================================
+   SEO / TELEGRAM / FACEBOOK PREVIEW
+========================================================= */
 
 export async function generateMetadata({ params }) {
   const article = await getArticle(params.slug);
@@ -39,7 +47,8 @@ export async function generateMetadata({ params }) {
       : `https://panoramaxeber.info.az${article.image_url}`
     : 'https://panoramaxeber.info.az/og-image.jpg';
 
-  const url = `https://panoramaxeber.info.az/article/${article.slug}`;
+  const url =
+    `https://panoramaxeber.info.az/article/${article.slug}`;
 
   return {
     title: `${title} | PANORAMA XƏBƏR`,
@@ -56,6 +65,8 @@ export async function generateMetadata({ params }) {
       siteName: 'PANORAMA XƏBƏR',
       type: 'article',
       locale: 'az_AZ',
+
+      publishedTime: article.created_at || undefined,
 
       images: [
         {
@@ -76,6 +87,10 @@ export async function generateMetadata({ params }) {
   };
 }
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default async function ArticlePage({ params }) {
   const article = await getArticle(params.slug);
 
@@ -83,9 +98,9 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
-  // ==========================================
-  // BAXIŞ SAYINI ARTIR
-  // ==========================================
+  /* =======================================================
+     BAXIŞ SAYI
+  ======================================================= */
 
   await supabase.rpc('increment_views', {
     article_id: article.id,
@@ -93,21 +108,21 @@ export default async function ArticlePage({ params }) {
 
   const currentViews = Number(article.views || 0) + 1;
 
-  // ==========================================
-  // KATEQORİYA
-  // ==========================================
+  /* =======================================================
+     KATEQORİYA
+  ======================================================= */
 
   const color = categoryColor(article.category);
 
-  // ==========================================
-  // XƏBƏR MƏTNİ
-  // ==========================================
+  /* =======================================================
+     MƏTN
+  ======================================================= */
 
   const cleanContent = article.content || '';
 
-  // ==========================================
-  // TARİX VƏ SAAT
-  // ==========================================
+  /* =======================================================
+     TARİX
+  ======================================================= */
 
   const publishedDate = article.created_at
     ? new Date(article.created_at)
@@ -116,7 +131,7 @@ export default async function ArticlePage({ params }) {
   const formattedDate = publishedDate
     ? publishedDate.toLocaleDateString('az-AZ', {
         day: '2-digit',
-        month: '2-digit',
+        month: 'long',
         year: 'numeric',
       })
     : '';
@@ -128,9 +143,9 @@ export default async function ArticlePage({ params }) {
       })
     : '';
 
-  // ==========================================
-  // PAYLAŞIM LİNKLƏRİ
-  // ==========================================
+  /* =======================================================
+     PAYLAŞIM
+  ======================================================= */
 
   const articleUrl =
     `https://panoramaxeber.info.az/article/${article.slug}`;
@@ -150,317 +165,299 @@ export default async function ArticlePage({ params }) {
     )}`;
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#f8fafc]">
 
-      <article className="max-w-5xl mx-auto px-4 py-8 md:py-12">
+      <article className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
 
-        {/* ==========================================
-            KATEQORİYA
-        ========================================== */}
+        {/* =================================================
+            ÜST NAVİQASİYA
+        ================================================= */}
 
-        <div className="mb-5">
-          <span
-            className="
-              inline-flex
-              items-center
-              px-3.5
-              py-1.5
-              text-sm
-              font-bold
-              text-white
-              rounded-full
-              shadow-sm
-            "
-            style={{
-              backgroundColor: color,
-            }}
+        <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
+          <Link
+            href="/"
+            className="transition hover:text-gray-900"
           >
+            Ana səhifə
+          </Link>
+
+          <span>›</span>
+
+          <span className="text-gray-600">
             {categoryName(article.category)}
           </span>
         </div>
 
-        {/* ==========================================
-            BAŞLIQ
-        ========================================== */}
+        {/* =================================================
+            ƏSAS XƏBƏR BLOKU
+        ================================================= */}
 
-        <h1
-          className="
-            text-3xl
-            md:text-5xl
-            lg:text-[52px]
-            font-extrabold
-            leading-[1.12]
-            tracking-tight
-            text-gray-950
-            mb-6
-          "
-        >
-          {article.title}
-        </h1>
+        <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-gray-100 sm:p-8 md:p-10">
 
-        {/* ==========================================
-            QISA MƏTN
-        ========================================== */}
+          {/* KATEQORİYA */}
 
-        {article.excerpt && (
-          <p
-            className="
-              text-lg
-              md:text-xl
-              text-gray-600
-              leading-relaxed
-              mb-7
-              max-w-4xl
-            "
-          >
-            {article.excerpt}
-          </p>
-        )}
-
-        {/* ==========================================
-            MƏLUMAT PANELİ
-        ========================================== */}
-
-        <div
-          className="
-            flex
-            flex-wrap
-            items-center
-            gap-x-5
-            gap-y-3
-            mb-8
-            py-4
-            px-4
-            rounded-xl
-            bg-gray-50
-            border
-            border-gray-100
-          "
-        >
-
-          {article.source && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="font-medium">
-                Mənbə:
-              </span>
-
-              <strong className="text-gray-900">
-                {article.source}
-              </strong>
-            </div>
-          )}
-
-          {article.source && publishedDate && (
-            <span className="hidden sm:block text-gray-300">
-              •
-            </span>
-          )}
-
-          {publishedDate && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="text-base">
-                📅
-              </span>
-
-              <span>
-                {formattedDate}
-              </span>
-            </div>
-          )}
-
-          {publishedDate && (
-            <>
-              <span className="hidden sm:block text-gray-300">
-                •
-              </span>
-
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-base">
-                  🕐
-                </span>
-
-                <span>
-                  {formattedTime}
-                </span>
-              </div>
-            </>
-          )}
-
-          <span className="hidden sm:block text-gray-300">
-            •
-          </span>
-
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <span className="text-base">
-              👁
-            </span>
-
-            <span>
-              {currentViews.toLocaleString('az-AZ')} baxış
-            </span>
-          </div>
-
-        </div>
-
-        {/* ==========================================
-            ƏSAS ŞƏKİL
-        ========================================== */}
-
-        {article.image_url && (
-          <div
-            className="
-              w-full
-              mb-9
-              bg-gray-100
-              rounded-2xl
-              overflow-hidden
-              border
-              border-gray-100
-              shadow-sm
-            "
-          >
-            <img
-              src={article.image_url}
-              alt={article.title}
+          <div className="mb-5">
+            <span
               className="
-                w-full
-                h-auto
-                object-contain
-                block
+                inline-flex
+                items-center
+                rounded-full
+                px-4
+                py-1.5
+                text-xs
+                font-bold
+                uppercase
+                tracking-wide
+                text-white
+                shadow-sm
               "
-            />
+              style={{
+                backgroundColor: color,
+              }}
+            >
+              {categoryName(article.category)}
+            </span>
           </div>
-        )}
 
-        {/* ==========================================
-            XƏBƏR MƏTNİ
-        ========================================== */}
+          {/* =================================================
+              BAŞLIQ
+          ================================================= */}
 
-        <div
-          className="
-            prose
-            prose-lg
-            max-w-none
-            text-gray-900
-            text-left
-            leading-relaxed
-            whitespace-pre-wrap
-          "
-          style={{
-            whiteSpace: 'pre-wrap',
-            textAlign: 'left',
-          }}
-          dangerouslySetInnerHTML={{
-            __html: cleanContent,
-          }}
-        />
+          <h1
+            className="
+              max-w-5xl
+              text-[30px]
+              font-black
+              leading-[1.12]
+              tracking-[-0.02em]
+              text-[#111827]
+              sm:text-[38px]
+              md:text-[48px]
+              lg:text-[54px]
+            "
+          >
+            {article.title}
+          </h1>
 
-        {/* ==========================================
-            PAYLAŞ
-        ========================================== */}
+          {/* =================================================
+              QISA MƏTN
+          ================================================= */}
 
-        <div className="mt-10 border-y border-gray-200 py-6">
+          {article.excerpt && (
+            <p
+              className="
+                mt-6
+                max-w-4xl
+                border-l-4
+                pl-4
+                text-base
+                leading-7
+                text-gray-600
+                sm:text-lg
+                md:text-xl
+                md:leading-8
+              "
+              style={{
+                borderColor: color,
+              }}
+            >
+              {article.excerpt}
+            </p>
+          )}
+
+          {/* =================================================
+              MƏLUMAT PANELİ
+          ================================================= */}
 
           <div
             className="
+              mt-7
               flex
-              flex-col
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-              gap-5
+              flex-wrap
+              items-center
+              gap-x-5
+              gap-y-3
+              border-y
+              border-gray-100
+              py-4
+              text-sm
+              text-gray-500
             "
           >
 
-            {/* Başlıq */}
+            {article.source && (
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-400">
+                  Mənbə
+                </span>
 
-            <div>
-              <div
-                className="
-                  text-[11px]
-                  font-bold
-                  uppercase
-                  tracking-[0.16em]
-                  text-gray-400
-                "
-              >
-                Xəbəri paylaş
+                <strong className="text-gray-800">
+                  {article.source}
+                </strong>
               </div>
+            )}
 
-              <div className="mt-1 text-sm font-semibold text-gray-800">
-                Bu xəbəri dostlarınızla paylaşın
+            {article.source && publishedDate && (
+              <span className="hidden text-gray-200 sm:block">
+                |
+              </span>
+            )}
+
+            {publishedDate && (
+              <div className="flex items-center gap-2">
+                <span>📅</span>
+                <span>{formattedDate}</span>
               </div>
+            )}
+
+            {publishedDate && (
+              <>
+                <span className="hidden text-gray-200 sm:block">
+                  |
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <span>🕐</span>
+                  <span>{formattedTime}</span>
+                </div>
+              </>
+            )}
+
+            <span className="hidden text-gray-200 sm:block">
+              |
+            </span>
+
+            <div className="flex items-center gap-2 font-semibold text-gray-600">
+              <span>👁</span>
+              <span>
+                {currentViews.toLocaleString('az-AZ')} baxış
+              </span>
             </div>
 
-            {/* Düymələr */}
+          </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+          {/* =================================================
+              ƏSAS ŞƏKİL
+          ================================================= */}
 
-              {/* Telegram */}
+          {article.image_url && (
+            <figure className="mt-8 overflow-hidden rounded-2xl bg-gray-100 ring-1 ring-gray-100">
 
-              <a
-                href={telegramShareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Telegram-da paylaş"
+              <img
+                src={article.image_url}
+                alt={article.title}
                 className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  bg-[#229ED9]
-                  px-4
-                  py-2.5
-                  text-sm
-                  font-bold
-                  text-white
-                  shadow-sm
-                  transition
-                  hover:-translate-y-0.5
-                  hover:shadow-md
+                  block
+                  h-auto
+                  w-full
+                  object-contain
                 "
-              >
-                <span className="text-base">
-                  ✈
-                </span>
+              />
 
-                <span>
+              <figcaption className="border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-400">
+                PANORAMA XƏBƏR
+              </figcaption>
+
+            </figure>
+          )}
+
+          {/* =================================================
+              XƏBƏR MƏTNİ
+          ================================================= */}
+
+          <div
+            className="
+              article-content
+              prose
+              prose-lg
+              mt-10
+              max-w-none
+              text-gray-800
+              prose-headings:text-gray-950
+              prose-p:leading-8
+              prose-p:text-gray-800
+              prose-a:text-blue-700
+              prose-strong:text-gray-950
+              sm:mt-12
+            "
+            dangerouslySetInnerHTML={{
+              __html: cleanContent,
+            }}
+          />
+
+          {/* =================================================
+              PAYLAŞIM
+          ================================================= */}
+
+          <div className="mt-12 border-t border-gray-100 pt-7">
+
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                  Xəbəri paylaş
+                </div>
+
+                <div className="mt-1 text-sm font-semibold text-gray-800">
+                  Bu xəbəri sosial şəbəkələrdə paylaşın
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+
+                {/* TELEGRAM */}
+
+                <a
+                  href={telegramShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-xl
+                    bg-[#229ED9]
+                    px-4
+                    py-2.5
+                    text-sm
+                    font-bold
+                    text-white
+                    transition
+                    hover:-translate-y-0.5
+                    hover:shadow-md
+                  "
+                >
+                  <span>✈</span>
                   Telegram
-                </span>
-              </a>
+                </a>
 
-              {/* WhatsApp */}
+                {/* WHATSAPP */}
 
-              <a
-                href={whatsappShareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp-da paylaş"
-                className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  bg-[#25D366]
-                  px-4
-                  py-2.5
-                  text-sm
-                  font-bold
-                  text-white
-                  shadow-sm
-                  transition
-                  hover:-translate-y-0.5
-                  hover:shadow-md
-                "
-              >
-                <span className="text-base">
-                  ☎
-                </span>
-
-                <span>
+                <a
+                  href={whatsappShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-xl
+                    bg-[#25D366]
+                    px-4
+                    py-2.5
+                    text-sm
+                    font-bold
+                    text-white
+                    transition
+                    hover:-translate-y-0.5
+                    hover:shadow-md
+                  "
+                >
+                  <span>☎</span>
                   WhatsApp
-                </span>
-              </a>
+                </a>
+
+              </div>
 
             </div>
 
@@ -468,50 +465,34 @@ export default async function ArticlePage({ params }) {
 
         </div>
 
-        {/* ==========================================
-            TELEGRAM KANAL BLOKU
-        ========================================== */}
+        {/* =================================================
+            TELEGRAM KANALI
+        ================================================= */}
 
-        <div className="mt-10">
+        <div className="mt-8">
 
           <div
             className="
               relative
               overflow-hidden
-              rounded-2xl
-              bg-gradient-to-r
-              from-slate-950
-              via-slate-900
-              to-slate-800
+              rounded-3xl
+              bg-[#0f172a]
               p-6
-              md:p-7
-              shadow-lg
+              shadow-sm
+              sm:p-8
             "
           >
 
             <div
               className="
                 absolute
-                -right-12
-                -top-12
-                w-36
-                h-36
+                -right-16
+                -top-16
+                h-40
+                w-40
                 rounded-full
-                bg-blue-500/20
-                blur-2xl
-              "
-            />
-
-            <div
-              className="
-                absolute
-                -left-10
-                -bottom-10
-                w-32
-                h-32
-                rounded-full
-                bg-cyan-400/10
-                blur-2xl
+                bg-blue-500/10
+                blur-3xl
               "
             />
 
@@ -520,62 +501,37 @@ export default async function ArticlePage({ params }) {
                 relative
                 flex
                 flex-col
+                gap-6
                 sm:flex-row
-                items-center
-                justify-between
-                gap-5
+                sm:items-center
+                sm:justify-between
               "
             >
 
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-4
-                  text-center
-                  sm:text-left
-                "
-              >
+              <div className="flex items-center gap-4">
 
                 <div
                   className="
-                    flex-shrink-0
-                    w-14
-                    h-14
-                    rounded-2xl
-                    bg-white/10
-                    backdrop-blur
                     flex
+                    h-14
+                    w-14
+                    flex-none
                     items-center
                     justify-center
-                    border
-                    border-white/10
+                    rounded-2xl
+                    bg-white/10
+                    text-2xl
                   "
                 >
-                  <span className="text-3xl">
-                    ✈️
-                  </span>
+                  ✈️
                 </div>
 
                 <div>
-                  <p
-                    className="
-                      text-white
-                      text-lg
-                      md:text-xl
-                      font-bold
-                    "
-                  >
+                  <p className="text-lg font-bold text-white">
                     PANORAMA XƏBƏR
                   </p>
 
-                  <p
-                    className="
-                      text-gray-300
-                      text-sm
-                      mt-1
-                    "
-                  >
+                  <p className="mt-1 text-sm text-gray-400">
                     Ən son xəbərləri Telegram kanalımızdan izləyin
                   </p>
                 </div>
@@ -587,32 +543,23 @@ export default async function ArticlePage({ params }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="
-                  flex-shrink-0
                   inline-flex
                   items-center
                   justify-center
                   gap-2
-                  px-5
-                  py-3
                   rounded-xl
                   bg-white
-                  text-slate-900
-                  font-bold
+                  px-5
+                  py-3
                   text-sm
+                  font-bold
+                  text-slate-900
+                  transition
                   hover:bg-gray-100
-                  hover:scale-[1.02]
-                  transition-all
-                  duration-200
-                  shadow-md
                 "
               >
-                <span>
-                  Telegram-a keç
-                </span>
-
-                <span className="text-lg">
-                  →
-                </span>
+                Telegram-a keç
+                <span>→</span>
               </a>
 
             </div>
@@ -621,34 +568,26 @@ export default async function ArticlePage({ params }) {
 
         </div>
 
-        {/* ==========================================
+        {/* =================================================
             ALT MƏLUMAT
-        ========================================== */}
+        ================================================= */}
 
         <div
           className="
             mt-8
-            pt-6
+            flex
+            flex-col
+            gap-4
             border-t
             border-gray-200
-            flex
-            flex-wrap
-            items-center
-            justify-between
-            gap-4
+            pt-6
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
           "
         >
 
-          <div
-            className="
-              flex
-              flex-wrap
-              items-center
-              gap-4
-              text-sm
-              text-gray-500
-            "
-          >
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
 
             <span>
               👁 {currentViews.toLocaleString('az-AZ')} baxış
@@ -670,9 +609,8 @@ export default async function ArticlePage({ params }) {
               text-sm
               font-semibold
               text-gray-700
-              hover:text-black
-              hover:underline
               transition
+              hover:text-black
             "
           >
             ← Ana səhifəyə qayıt
