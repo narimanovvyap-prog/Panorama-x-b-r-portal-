@@ -5,6 +5,138 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CATEGORIES } from '@/lib/categories';
 
+const SOCIAL_LINKS = {
+  instagram: 'https://www.instagram.com/panoramaxeber',
+  facebook: 'https://www.facebook.com/profile.php?id=61594450214117',
+  telegram: 'https://t.me/panoramaxeberinfoaz',
+  whatsapp: 'https://wa.me/994553737900',
+};
+
+// =====================================================
+// SOSİAL İKONLAR
+// =====================================================
+
+function InstagramIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="5"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+
+      <circle
+        cx="12"
+        cy="12"
+        r="4"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+
+      <circle
+        cx="17.5"
+        cy="6.5"
+        r="1.2"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="currentColor"
+        d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.6 1.6-1.6h1.7V3.8c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3V10H7.3v3h2.8v8h3.4Z"
+      />
+    </svg>
+  );
+}
+
+function TelegramIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="currentColor"
+        d="M21.7 3.3 18.5 20c-.2 1.2-.9 1.5-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.7l-4.9-1.5c-1.1-.3-1.1-1.1.2-1.6L20.4 3c.9-.3 1.7.2 1.3.3Z"
+      />
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="currentColor"
+        d="M12 2a9.9 9.9 0 0 0-8.5 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3.1.8.8-3-.2-.3A8 8 0 1 1 12 20Zm4.4-5.9c-.2-.1-1.3-.6-1.5-.7-.2-.1-.4-.1-.5.1-.2.2-.6.7-.7.8-.1.1-.3.2-.5.1-1.5-.7-2.5-1.3-3.5-2.9-.3-.5.3-.4.8-1.3.1-.2.1-.3 0-.5-.1-.1-.5-1.2-.7-1.6-.2-.4-.4-.4-.5-.4h-.4c-.2 0-.5.1-.7.3-.7.7-.9 1.6-.6 2.5.1.3.2.6.4.9.9 1.7 2.3 3.1 4.1 3.9.6.3 1.1.5 1.5.6.6.2 1.1.2 1.5.1.5-.1 1.3-.5 1.5-1 .2-.5.2-.9.1-1-.1-.1-.2-.2-.4-.3Z"
+      />
+    </svg>
+  );
+}
+
+// =====================================================
+// SOSİAL DÜYMƏ
+// =====================================================
+
+function SocialButton({ href, label, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      title={label}
+      className="
+        w-9
+        h-9
+        rounded-full
+        border
+        border-gray-200
+        bg-white
+        text-[#172b4d]
+        flex
+        items-center
+        justify-center
+        hover:bg-[#172b4d]
+        hover:text-white
+        hover:border-[#172b4d]
+        transition-all
+        duration-200
+        shadow-sm
+      "
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function Header() {
   const router = useRouter();
 
@@ -220,7 +352,6 @@ export default function Header() {
 
       </div>
 
-
       {/* =================================================
           ƏSAS HEADER
       ================================================= */}
@@ -240,8 +371,6 @@ export default function Header() {
               className="flex items-center gap-3 group flex-none"
               onClick={() => setMenuOpen(false)}
             >
-
-              {/* LOGO İKONU */}
 
               <div className="relative w-12 h-12">
 
@@ -273,9 +402,6 @@ export default function Header() {
 
               </div>
 
-
-              {/* LOGO YAZISI */}
-
               <div>
 
                 <div className="text-[25px] md:text-[29px] font-black tracking-[-0.04em] text-[#111827] leading-none group-hover:text-[#2563eb] transition-colors">
@@ -289,7 +415,6 @@ export default function Header() {
               </div>
 
             </Link>
-
 
             {/* =================================================
                 ORTA BLOK
@@ -323,9 +448,7 @@ export default function Header() {
 
                 </div>
 
-
                 <div className="h-9 w-px bg-gray-200" />
-
 
                 {/* SAAT */}
 
@@ -345,12 +468,45 @@ export default function Header() {
 
             </div>
 
-
             {/* =================================================
-                SAĞ TƏRƏF
+                SOSİAL + AXTARIŞ
             ================================================= */}
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+
+              {/* SOSİAL ŞƏBƏKƏLƏR */}
+
+              <div className="hidden md:flex items-center gap-1.5">
+
+                <SocialButton
+                  href={SOCIAL_LINKS.instagram}
+                  label="Instagram"
+                >
+                  <InstagramIcon />
+                </SocialButton>
+
+                <SocialButton
+                  href={SOCIAL_LINKS.facebook}
+                  label="Facebook"
+                >
+                  <FacebookIcon />
+                </SocialButton>
+
+                <SocialButton
+                  href={SOCIAL_LINKS.telegram}
+                  label="Telegram"
+                >
+                  <TelegramIcon />
+                </SocialButton>
+
+                <SocialButton
+                  href={SOCIAL_LINKS.whatsapp}
+                  label="WhatsApp"
+                >
+                  <WhatsAppIcon />
+                </SocialButton>
+
+              </div>
 
               {/* DESKTOP AXTARIŞ */}
 
@@ -397,7 +553,6 @@ export default function Header() {
 
               </form>
 
-
               {/* MOBİL MENYU */}
 
               <button
@@ -427,6 +582,41 @@ export default function Header() {
 
       </div>
 
+      {/* =================================================
+          MOBİL SOSİAL İKONLAR
+      ================================================= */}
+
+      <div className="md:hidden flex items-center justify-center gap-2 py-3 border-t border-gray-100 bg-white">
+
+        <SocialButton
+          href={SOCIAL_LINKS.instagram}
+          label="Instagram"
+        >
+          <InstagramIcon />
+        </SocialButton>
+
+        <SocialButton
+          href={SOCIAL_LINKS.facebook}
+          label="Facebook"
+        >
+          <FacebookIcon />
+        </SocialButton>
+
+        <SocialButton
+          href={SOCIAL_LINKS.telegram}
+          label="Telegram"
+        >
+          <TelegramIcon />
+        </SocialButton>
+
+        <SocialButton
+          href={SOCIAL_LINKS.whatsapp}
+          label="WhatsApp"
+        >
+          <WhatsAppIcon />
+        </SocialButton>
+
+      </div>
 
       {/* =================================================
           ƏSAS MENYU
@@ -464,7 +654,6 @@ export default function Header() {
 
           </div>
 
-
           {/* TABLET / MOBİL */}
 
           <div className="lg:hidden flex items-center h-11 overflow-x-auto">
@@ -493,7 +682,6 @@ export default function Header() {
         </div>
 
       </nav>
-
 
       {/* =================================================
           MOBİL MENYU
@@ -529,7 +717,6 @@ export default function Header() {
 
             </form>
 
-
             {/* KATEQORİYALAR */}
 
             <div className="grid grid-cols-2 gap-1">
@@ -557,7 +744,6 @@ export default function Header() {
 
             </div>
 
-
             {/* MOBİL HAVA */}
 
             <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
@@ -583,7 +769,6 @@ export default function Header() {
                 </div>
 
               </div>
-
 
               <div className="text-right">
 
