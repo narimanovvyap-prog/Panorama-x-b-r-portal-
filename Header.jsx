@@ -5,10 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { CATEGORIES } from '@/lib/categories';
 
-/* =========================================================
-   SOSİAL MEDİA LİNKLƏRİ
-========================================================= */
-
 const SOCIAL_LINKS = {
   instagram: 'https://www.instagram.com/panoramaxeber',
   facebook: 'https://www.facebook.com/profile.php?id=61594450214117',
@@ -16,9 +12,9 @@ const SOCIAL_LINKS = {
   whatsapp: 'https://wa.me/994553737900',
 };
 
-/* =========================================================
-   INSTAGRAM İKONU
-========================================================= */
+/* =========================
+   INSTAGRAM
+========================= */
 
 function InstagramIcon() {
   return (
@@ -58,9 +54,9 @@ function InstagramIcon() {
   );
 }
 
-/* =========================================================
-   FACEBOOK İKONU
-========================================================= */
+/* =========================
+   FACEBOOK
+========================= */
 
 function FacebookIcon() {
   return (
@@ -79,9 +75,9 @@ function FacebookIcon() {
   );
 }
 
-/* =========================================================
-   TELEGRAM İKONU
-========================================================= */
+/* =========================
+   TELEGRAM
+========================= */
 
 function TelegramIcon() {
   return (
@@ -100,9 +96,9 @@ function TelegramIcon() {
   );
 }
 
-/* =========================================================
-   WHATSAPP İKONU
-========================================================= */
+/* =========================
+   WHATSAPP
+========================= */
 
 function WhatsAppIcon() {
   return (
@@ -121,9 +117,9 @@ function WhatsAppIcon() {
   );
 }
 
-/* =========================================================
-   SOSİAL İKON KOMPONENTİ
-========================================================= */
+/* =========================
+   SOSİAL İKON
+========================= */
 
 function SocialIcon({ href, label, children }) {
   return (
@@ -148,16 +144,13 @@ function SocialIcon({ href, label, children }) {
         hover:border-ink
         transition-all
         duration-200
+        flex-shrink-0
       "
     >
       {children}
     </a>
   );
 }
-
-/* =========================================================
-   HEADER
-========================================================= */
 
 export default function Header() {
   const router = useRouter();
@@ -166,9 +159,9 @@ export default function Header() {
   const [dateTime, setDateTime] = useState('');
   const [language, setLanguage] = useState('az');
 
-  /* =======================================================
+  /* =========================
      DİL
-  ======================================================= */
+  ========================= */
 
   useEffect(() => {
     const savedLanguage =
@@ -177,9 +170,9 @@ export default function Header() {
     setLanguage(savedLanguage);
   }, []);
 
-  /* =======================================================
+  /* =========================
      TARİX + SAAT
-  ======================================================= */
+  ========================= */
 
   useEffect(() => {
     function updateDateTime() {
@@ -210,9 +203,9 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
-  /* =======================================================
-     DİL DƏYİŞDİRMƏ
-  ======================================================= */
+  /* =========================
+     DİL DƏYİŞ
+  ========================= */
 
   function changeLanguage(lang) {
     setLanguage(lang);
@@ -225,40 +218,34 @@ export default function Header() {
     window.location.reload();
   }
 
-  /* =======================================================
+  /* =========================
      AXTARIŞ
-  ======================================================= */
+  ========================= */
 
   function handleSearch(e) {
     e.preventDefault();
 
     if (q.trim()) {
       router.push(
-        `/axtar?q=${encodeURIComponent(
-          q.trim()
-        )}`
+        `/axtar?q=${encodeURIComponent(q.trim())}`
       );
     }
   }
 
-  /* =======================================================
-     JSX
-  ======================================================= */
-
   return (
     <header className="border-b-2 border-ink bg-bg sticky top-0 z-30">
 
-      {/* ===================================================
+      {/* =========================
           YUXARI HİSSƏ
-      =================================================== */}
+      ========================= */}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
 
         <div className="flex items-center justify-between gap-4">
 
-          {/* ===============================================
+          {/* =========================
               LOGO
-          =============================================== */}
+          ========================= */}
 
           <Link
             href="/"
@@ -310,19 +297,15 @@ export default function Header() {
 
           </Link>
 
-          {/* ===============================================
+          {/* =========================
               SAĞ TƏRƏF
-          =============================================== */}
+          ========================= */}
 
           <div className="flex flex-col items-end gap-2">
 
-            {/* =============================================
-                TARİX + SOSİAL MEDİA
-            ============================================= */}
+            {/* TARİX + SOSİAL ŞƏBƏKƏLƏR */}
 
             <div className="flex items-center gap-3">
-
-              {/* TARİX */}
 
               {dateTime && (
                 <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
@@ -330,11 +313,10 @@ export default function Header() {
                 </div>
               )}
 
-              {/* SOSİAL MEDİA */}
+              {/* SOSİAL İKONLAR
+                  MOBİLDA DA GÖRÜNÜR */}
 
-              <div className="hidden sm:flex items-center gap-1.5">
-
-                {/* INSTAGRAM */}
+              <div className="flex items-center gap-1.5">
 
                 <SocialIcon
                   href={SOCIAL_LINKS.instagram}
@@ -343,8 +325,6 @@ export default function Header() {
                   <InstagramIcon />
                 </SocialIcon>
 
-                {/* FACEBOOK */}
-
                 <SocialIcon
                   href={SOCIAL_LINKS.facebook}
                   label="Facebook"
@@ -352,16 +332,12 @@ export default function Header() {
                   <FacebookIcon />
                 </SocialIcon>
 
-                {/* TELEGRAM */}
-
                 <SocialIcon
                   href={SOCIAL_LINKS.telegram}
                   label="Telegram"
                 >
                   <TelegramIcon />
                 </SocialIcon>
-
-                {/* WHATSAPP */}
 
                 <SocialIcon
                   href={SOCIAL_LINKS.whatsapp}
@@ -374,9 +350,9 @@ export default function Header() {
 
             </div>
 
-            {/* =============================================
+            {/* =========================
                 DİL SEÇİMİ
-            ============================================= */}
+            ========================= */}
 
             <div className="flex items-center gap-1">
 
@@ -424,9 +400,9 @@ export default function Header() {
 
             </div>
 
-            {/* =============================================
+            {/* =========================
                 DESKTOP AXTARIŞ
-            ============================================= */}
+            ========================= */}
 
             <form
               onSubmit={handleSearch}
@@ -457,9 +433,9 @@ export default function Header() {
 
       </div>
 
-      {/* ===================================================
+      {/* =========================
           NAVİQASİYA
-      =================================================== */}
+      ========================= */}
 
       <nav className="bg-ink overflow-x-auto">
 
@@ -486,9 +462,9 @@ export default function Header() {
 
       </nav>
 
-      {/* ===================================================
-          MOBİL SOSİAL MEDİA
-      =================================================== */}
+      {/* =========================
+          MOBİL SOSİAL İKONLAR
+      ========================= */}
 
       <div className="sm:hidden flex items-center justify-center gap-2 py-2 border-b border-line bg-bg">
 
@@ -522,9 +498,9 @@ export default function Header() {
 
       </div>
 
-      {/* ===================================================
+      {/* =========================
           MOBİL AXTARIŞ
-      =================================================== */}
+      ========================= */}
 
       <form
         onSubmit={handleSearch}
