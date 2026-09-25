@@ -16,7 +16,13 @@ function InstagramIcon() {
     >
       <rect x="3" y="3" width="18" height="18" rx="5" />
       <circle cx="12" cy="12" r="4.2" />
-      <circle cx="17.4" cy="6.7" r="1" fill="currentColor" stroke="none" />
+      <circle
+        cx="17.4"
+        cy="6.7"
+        r="1"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
@@ -115,6 +121,7 @@ export default function Footer() {
               </div>
 
               <div>
+
                 <div className="font-serif text-2xl font-bold tracking-tight text-white transition-colors group-hover:text-blue-400">
                   PANORAMA
                 </div>
@@ -122,15 +129,20 @@ export default function Footer() {
                 <div className="text-[9px] uppercase tracking-[0.25em] text-gray-500">
                   Xəbər Portalı
                 </div>
+
               </div>
 
             </Link>
+
+
+            {/* Açıqlama */}
 
             <p className="mt-5 max-w-sm text-sm leading-7 text-gray-400">
               Azərbaycandan və dünyadan ən son xəbərləri,
               mühüm hadisələri və gündəmdə olan məlumatları
               operativ şəkildə təqdim edirik.
             </p>
+
 
             {/* =================================================
                 SOSİAL ŞƏBƏKƏLƏR
@@ -145,6 +157,7 @@ export default function Footer() {
               <div className="flex items-center gap-2">
 
                 {/* Instagram */}
+
                 <a
                   href="https://www.instagram.com/panoramaxeber"
                   target="_blank"
@@ -155,7 +168,9 @@ export default function Footer() {
                   <InstagramIcon />
                 </a>
 
+
                 {/* Facebook */}
+
                 <a
                   href="https://www.facebook.com/profile.php?id=61594450214117"
                   target="_blank"
@@ -166,7 +181,9 @@ export default function Footer() {
                   <FacebookIcon />
                 </a>
 
+
                 {/* Telegram */}
+
                 <a
                   href="https://t.me/panoramaxeberinfoaz"
                   target="_blank"
@@ -177,7 +194,9 @@ export default function Footer() {
                   <TelegramIcon />
                 </a>
 
+
                 {/* WhatsApp */}
+
                 <a
                   href="https://wa.me/994553737900"
                   target="_blank"
@@ -208,6 +227,7 @@ export default function Footer() {
             <ul className="space-y-3">
 
               {CATEGORIES.slice(0, 6).map((category) => (
+
                 <li key={category.slug}>
 
                   <Link
@@ -218,6 +238,7 @@ export default function Footer() {
                   </Link>
 
                 </li>
+
               ))}
 
             </ul>
@@ -238,39 +259,50 @@ export default function Footer() {
             <ul className="space-y-3">
 
               <li>
+
                 <Link
                   href="/"
                   className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   Əsas səhifə
                 </Link>
+
               </li>
 
+
               <li>
+
                 <Link
                   href="/haqqimizda"
                   className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   Haqqımızda
                 </Link>
+
               </li>
 
+
               <li>
+
                 <Link
                   href="/elaqe"
                   className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   Əlaqə
                 </Link>
+
               </li>
 
+
               <li>
+
                 <Link
                   href="/"
                   className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   Son xəbərlər
                 </Link>
+
               </li>
 
             </ul>
@@ -288,9 +320,11 @@ export default function Footer() {
               Əlaqə
             </h3>
 
+
             <div className="space-y-4">
 
               {/* Ünvan */}
+
               <div className="flex gap-3">
 
                 <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/5 text-xs">
@@ -298,6 +332,7 @@ export default function Footer() {
                 </span>
 
                 <div>
+
                   <div className="text-[9px] uppercase tracking-widest text-gray-600">
                     Ünvan
                   </div>
@@ -305,12 +340,14 @@ export default function Footer() {
                   <div className="mt-1 text-sm text-gray-400">
                     Bakı, Azərbaycan
                   </div>
+
                 </div>
 
               </div>
 
 
               {/* Telefon */}
+
               <div className="flex gap-3">
 
                 <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/5 text-xs">
@@ -318,6 +355,7 @@ export default function Footer() {
                 </span>
 
                 <div>
+
                   <div className="text-[9px] uppercase tracking-widest text-gray-600">
                     Telefon
                   </div>
@@ -328,12 +366,14 @@ export default function Footer() {
                   >
                     055 373 79 00
                   </a>
+
                 </div>
 
               </div>
 
 
               {/* E-poçt */}
+
               <div className="flex gap-3">
 
                 <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/5 text-xs">
@@ -347,10 +387,10 @@ export default function Footer() {
                   </div>
 
                   <a
-                    href="mailto:narimanovvyap@gmail.com"
+                    href="mailto:panoramaxeber@gmail.com"
                     className="mt-1 block break-all text-sm text-gray-400 transition hover:text-white"
                   >
-                    narimanovvyap@gmail.com
+                    panoramaxeber@gmail.com
                   </a>
 
                 </div>
@@ -365,12 +405,14 @@ export default function Footer() {
 
 
         {/* =====================================================
-            REDAKSİYA
+            REDAKSİYA MƏLUMATLARI
         ===================================================== */}
 
         <div className="border-t border-white/10 py-7">
 
           <div className="grid gap-6 md:grid-cols-2">
+
+            {/* Redaksiya */}
 
             <div>
 
@@ -379,13 +421,19 @@ export default function Footer() {
               </div>
 
               <p className="text-sm text-gray-400">
+
                 <span className="font-semibold text-gray-300">
                   Baş redaktor:
                 </span>{' '}
+
                 Aydan Əliyeva
+
               </p>
 
             </div>
+
+
+            {/* Reklam */}
 
             <div className="md:text-right">
 
@@ -406,7 +454,7 @@ export default function Footer() {
 
 
         {/* =====================================================
-            ALT HİSSƏ
+            HÜQUQİ / ALT HİSSƏ
         ===================================================== */}
 
         <div className="border-t border-white/10 py-5">
@@ -427,7 +475,7 @@ export default function Footer() {
 
 
         {/* =====================================================
-            ALT LOGO
+            ALT YAZI
         ===================================================== */}
 
         <div className="border-t border-white/5 py-5 text-center">
