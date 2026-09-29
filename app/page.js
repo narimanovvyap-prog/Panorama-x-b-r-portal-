@@ -346,22 +346,6 @@ export default async function HomePage() {
     activeAds,
   } = await getData();
 
-  const featuredIds = new Set(
-    featured.map((article) => article.id)
-  );
-
-  /* =======================================================
-     VİDEO XƏBƏRLƏR
-  ======================================================= */
-
-  const videoNews = articles
-    .filter(
-      (article) =>
-        article.video_url &&
-        article.video_url.trim() !== ''
-    )
-    .slice(0, 6);
-
   /* =======================================================
      VİDEOSUZ XƏBƏRLƏR
   ======================================================= */
@@ -370,6 +354,16 @@ export default async function HomePage() {
     (article) =>
       !article.video_url ||
       article.video_url.trim() === ''
+  );
+
+  const featuredArticles = featured.filter(
+    (article) =>
+      !article.video_url ||
+      article.video_url.trim() === ''
+  );
+
+  const featuredIds = new Set(
+    featuredArticles.map((article) => article.id)
   );
 
   /* =======================================================
@@ -410,7 +404,7 @@ export default async function HomePage() {
   ======================================================= */
 
   const categoryNews = (category) =>
-    articles
+    nonVideo
       .filter(
         (article) =>
           article.category === category &&
@@ -448,7 +442,7 @@ export default async function HomePage() {
 
           {/* HERO */}
           <div className="overflow-hidden rounded-2xl">
-            <HeroSlider articles={featured} />
+            <HeroSlider articles={featuredArticles} />
           </div>
 
           {/* GÜNÜN SEÇİMİ */}
@@ -798,16 +792,6 @@ export default async function HomePage() {
         </section>
 
       )}
-
-      {/* =====================================================
-          VİDEO XƏBƏRLƏR
-      ===================================================== */}
-
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        <VideoSection articles={videoNews} />
-
-      </section>
 
       {/* =====================================================
           FOTO / VİDEO

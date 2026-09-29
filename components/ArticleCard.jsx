@@ -58,10 +58,6 @@ export default function ArticleCard({ article }) {
                     ? article.image_url
                     : undefined
                 }
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
               />
 
               {/* VİDEO ETİKETİ */}
