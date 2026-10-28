@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -21,37 +22,30 @@ export default function HeroSlider({ articles = [] }) {
   };
 
   const nextSlide = () => {
-    const nextIndex =
-      (current + 1) % articles.length;
-
+    const nextIndex = (current + 1) % articles.length;
     changeSlide(nextIndex);
   };
 
   const previousSlide = () => {
     const previousIndex =
-      (current - 1 + articles.length) %
-      articles.length;
+      (current - 1 + articles.length) % articles.length;
 
     changeSlide(previousIndex);
   };
 
-  /* ================================
-     5 SANİYƏLİK AVTOMATİK SLAYDER
-  ================================= */
+  // AVTOMATIK SLAYDER — 10 SANİYƏ
 
   useEffect(() => {
     if (articles.length <= 1) return;
 
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % articles.length);
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [articles.length]);
 
-  /* ================================
-     BOŞDURSA
-  ================================= */
+  // XƏBƏR YOXDURSA
 
   if (!articles.length) {
     return null;
@@ -60,16 +54,13 @@ export default function HeroSlider({ articles = [] }) {
   return (
     <div className="relative group h-[390px] sm:h-[450px] lg:h-[520px] overflow-hidden bg-[#111827]">
 
-      {/* =================================
-          ƏSAS ŞƏKİL + MƏQALƏ KEÇİDİ
-      ================================== */}
+      {/* ƏSAS ŞƏKİL VƏ XƏBƏR */}
 
       <Link
         href={`/article/${article.slug}`}
         className="absolute inset-0 z-10 block"
         aria-label={article.title}
       >
-
         {/* ŞƏKİL */}
 
         {article.image_url ? (
@@ -92,27 +83,19 @@ export default function HeroSlider({ articles = [] }) {
           </div>
         )}
 
-        {/* =================================
-            YUMŞAQ QARA GRADIENT
-        ================================== */}
+        {/* QARA GRADIENT */}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/5" />
 
-        {/* =================================
-            ÜST SOL — BAŞ XƏBƏR
-        ================================== */}
+        {/* BAŞ XƏBƏR ETİKETİ */}
 
         <div className="absolute top-5 left-5 md:top-7 md:left-7">
-
           <span className="inline-flex items-center bg-white px-3.5 py-2 text-[10px] font-bold tracking-[0.12em] text-[#172b4d] shadow-sm">
             BAŞ XƏBƏR
           </span>
-
         </div>
 
-        {/* =================================
-            AŞAĞI MƏTN
-        ================================== */}
+        {/* XƏBƏR MƏTNİ */}
 
         <div
           className={`absolute left-0 right-0 bottom-0 px-5 pb-7 pt-20 sm:px-7 sm:pb-8 md:px-9 md:pb-10 transition-all duration-500 ${
@@ -121,26 +104,17 @@ export default function HeroSlider({ articles = [] }) {
               : 'opacity-100 translate-y-0'
           }`}
         >
-
-          {/* Kateqoriya */}
-
           {article.category && (
             <div className="mb-3">
-
               <span className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.18em] text-white/75">
                 {article.category}
               </span>
-
             </div>
           )}
-
-          {/* Başlıq */}
 
           <h1 className="max-w-4xl text-[25px] sm:text-[31px] md:text-[40px] lg:text-[46px] font-bold leading-[1.1] tracking-[-0.02em] text-white">
             {article.title}
           </h1>
-
-          {/* Excerpt */}
 
           {article.excerpt && (
             <p className="mt-3 max-w-2xl text-[13px] sm:text-sm md:text-base leading-relaxed text-white/75 line-clamp-2">
@@ -148,23 +122,16 @@ export default function HeroSlider({ articles = [] }) {
             </p>
           )}
 
-          {/* Xəbəri oxu */}
-
           <div className="mt-5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-white/90">
             Xəbəri oxu
-
             <span className="transition-transform duration-200 group-hover:translate-x-1">
               →
             </span>
           </div>
-
         </div>
-
       </Link>
 
-      {/* =================================
-          SOL OX
-      ================================== */}
+      {/* ƏVVƏLKİ XƏBƏR */}
 
       {articles.length > 1 && (
         <button
@@ -195,9 +162,7 @@ export default function HeroSlider({ articles = [] }) {
         </button>
       )}
 
-      {/* =================================
-          SAĞ OX
-      ================================== */}
+      {/* NÖVBƏTİ XƏBƏR */}
 
       {articles.length > 1 && (
         <button
@@ -228,13 +193,10 @@ export default function HeroSlider({ articles = [] }) {
         </button>
       )}
 
-      {/* =================================
-          AŞAĞI SLIDER GÖSTƏRİCİLƏRİ
-      ================================== */}
+      {/* SLAYDER GÖSTƏRİCİLƏRİ */}
 
       {articles.length > 1 && (
         <div className="absolute bottom-5 right-5 z-30 flex items-center gap-2 md:right-8 md:bottom-7">
-
           {articles.map((item, index) => (
             <button
               key={item.id}
@@ -252,13 +214,10 @@ export default function HeroSlider({ articles = [] }) {
               }`}
             />
           ))}
-
         </div>
       )}
 
-      {/* =================================
-          AŞAĞIDA XƏBƏR NÖMRƏSİ
-      ================================== */}
+      {/* XƏBƏR NÖMRƏSİ */}
 
       {articles.length > 1 && (
         <div className="absolute bottom-6 left-5 z-30 text-[10px] font-semibold tracking-[0.15em] text-white/60 md:left-8">
@@ -267,7 +226,6 @@ export default function HeroSlider({ articles = [] }) {
           {String(articles.length).padStart(2, '0')}
         </div>
       )}
-
     </div>
   );
 }
