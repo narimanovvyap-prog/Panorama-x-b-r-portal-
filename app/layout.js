@@ -13,7 +13,7 @@ export const metadata = {
 
   title: {
     default: 'PANORAMA — Xəbər Portalı',
-    template: '%s | PANORAMA',
+    template: '%s | PANORAMA XƏBƏR',
   },
 
   description:
@@ -29,6 +29,10 @@ export const metadata = {
     'gündəm',
     'xəbər portalı',
     'Bakı xəbərləri',
+    'Dünya xəbərləri',
+    'Siyasət',
+    'İqtisadiyyat',
+    'İdman',
   ],
 
   authors: [
@@ -40,6 +44,10 @@ export const metadata = {
   creator: 'PANORAMA Xəbər Portalı',
 
   publisher: 'PANORAMA Xəbər Portalı',
+
+  alternates: {
+    canonical: '/',
+  },
 
   icons: {
     icon: '/logo.png',
