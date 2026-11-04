@@ -62,9 +62,9 @@ export const metadata = {
     type: 'website',
     images: [
       {
-        url: '/logo.png',
-        width: 1200,
-        height: 630,
+        url: '/og-image.jpg',
+        width: 1600,
+        height: 837,
         alt: 'PANORAMA — Xəbər Portalı',
       },
     ],
@@ -74,7 +74,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'PANORAMA — Xəbər Portalı',
     description: 'Azərbaycandan və dünyadan ən son xəbərlər.',
-    images: ['/logo.png'],
+    images: ['/og-image.jpg'],
   },
 
   robots: {
